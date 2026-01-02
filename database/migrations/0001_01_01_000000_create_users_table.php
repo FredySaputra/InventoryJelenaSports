@@ -15,7 +15,7 @@ return new class extends Migration
             $table->string('id',40)->nullable(false)->primary();
             $table->string('nama',100)->nullable(false);
             $table->string('noTelp',20)->nullable(false);
-            $table->timestamp('username')->nullable(false)->unique();
+            $table->string('username')->nullable(false)->unique();
             $table->string('password')->nullable(false);
             $table->enum('role',['Admin','Karyawan'])->nullable(false);
         });

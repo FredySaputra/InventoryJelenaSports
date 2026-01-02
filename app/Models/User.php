@@ -7,9 +7,12 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
+use PHPOpenSourceSaver\JWTAuth\Contracts\JWTSubject;
 
-class User extends Authenticatable
+class User extends Authenticatable implements JWTSubject
 {
+    use HasApiTokens;
     protected $table = 'users';
     protected $primaryKey = 'id';
     protected $keyType = 'string';
@@ -26,5 +29,18 @@ class User extends Authenticatable
     public function produk() : HasMany
     {
         return $this->hasMany(Produk::class, 'idUser','id');
+    }
+
+    public function getJWTIdentifier()
+    {
+        return $this->getKey();
+    }
+
+    public function getJWTCustomClaims()
+    {
+        return [
+            'role' => $this->role,
+            'nama' => $this->nama
+        ];
     }
 }

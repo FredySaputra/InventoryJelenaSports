@@ -10,10 +10,11 @@ class Pelanggan extends Model
     protected $table = 'pelanggans';
     protected $primaryKey = 'id';
     protected $keyType = 'string';
-    public $incrementing = 'false';
-    public $timestamps = 'false';
+    public $incrementing = false;
+    public $timestamps = false;
 
     protected $fillable = [
+        'id',
         'nama',
         'alamat',
         'kontak'

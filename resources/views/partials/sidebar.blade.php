@@ -1,5 +1,5 @@
 <nav class="sidebar">
-    <div class="sidebar-header">Jelena Sports</div>
+    <div class="sidebar-header">Jenela Sports</div>
     <ul class="nav-links">
         <li>
             <a href="/dashboard" class="{{ request()->is('dashboard') ? 'active' : '' }}">

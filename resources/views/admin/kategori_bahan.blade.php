@@ -112,7 +112,8 @@
         async function loadKategoris() {
             try {
                 const res = await fetch('/api/kategoris', { headers: { 'Authorization': 'Bearer ' + token } });
-                const data = await res.json();
+                const responseJson = await res.json();
+                const data = responseJson.data;
 
                 const list = document.getElementById('listKategori');
                 list.innerHTML = '';

@@ -14,6 +14,12 @@
         </li>
 
         <li>
+            <a href="/produk" class="{{ request()->is('produk*') ? 'active' : '' }}">
+                Data Produk
+            </a>
+        </li>
+
+        <li>
             <a href="/stok-barang" class="{{ request()->is('stok-barang') ? 'active' : '' }}">
                 Stok Barang
             </a>

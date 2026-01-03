@@ -6,8 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\UserLoginRequest;
 use App\Http\Resources\LoginResource;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 
 class UserController extends Controller
 {
@@ -15,29 +13,27 @@ class UserController extends Controller
     {
         $credentials = $request->validated();
 
-        if (Auth::attempt($credentials)) {
-            $user = Auth::user();
-            $token = $user->createToken('auth_token')->plainTextToken;
-
-            return (new LoginResource($user))->additional([
-                'token' => $token,
-                'token_type' => 'Bearer',
-                'status' => 'success',
-                'message' => 'Login berhasil',
-            ]);
+        if (! $token = auth()->guard('api')->attempt($credentials)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Username atau password salah'
+            ], 401);
         }
 
-        return response()->json([
-            'status' => 'error',
-            'message' => 'Email atau password salah'
-        ], 401);
+        $user = auth()->guard('api')->user();
+
+        return (new LoginResource($user))->additional([
+            'token' => $token,
+            'token_type' => 'Bearer',
+            'expires_in' => auth()->guard('api')->factory()->getTTL() * 60,
+            'status' => 'success',
+            'message' => 'Login berhasil',
+        ]);
     }
 
-    public function logout(Request $request) : JsonResponse
+    public function logout() : JsonResponse
     {
-        if ($request->user()) {
-            $request->user()->currentAccessToken()->delete();
-        }
+        auth()->guard('api')->logout();
 
         return response()->json([
             'status' => 'success',

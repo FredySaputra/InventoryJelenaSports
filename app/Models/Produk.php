@@ -23,12 +23,13 @@ class Produk extends Model
         return $this->belongsTo(User::class,'idUser','id');
     }
 
-    public function kategori() : BelongsTo
+    public function kategori()
     {
-        return $this->belongsTo(Kategori::class,'idKategori','id');
+        return $this->belongsTo(Kategori::class, 'idKategori', 'id');
     }
-    public function stok () : HasMany
+
+    public function stoks()
     {
-        return $this->hasMany(Stok::class,'idProduk','id');
+        return $this->hasMany(Stok::class, 'idProduk', 'id');
     }
 }

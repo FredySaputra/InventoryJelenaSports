@@ -17,7 +17,7 @@ class Kategori extends Model
         'nama'
     ];
 
-    public function produk() : HasMany
+    public function produks() : HasMany
     {
         return $this->hasMany(Produk::class, 'idKategori', 'id');
     }

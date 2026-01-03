@@ -37,6 +37,6 @@ class UserLoginRequest extends FormRequest
             'errors' => [
                 $validator->errors()
             ]
-        ],442));
+        ],422));
     }
 }

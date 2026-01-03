@@ -6,10 +6,11 @@ use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\PelanggansController;
 use App\Http\Controllers\Api\KategoriController;
 use App\Http\Controllers\Api\BahanController;
+use App\Http\Controllers\Api\ProdukController;
 
 Route::post('/users/login', [UserController::class, 'login']);
 
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware('auth:api')->group(function () {
     Route::get('/kategoris', [KategoriController::class, 'index']);
     Route::post('/kategoris', [KategoriController::class, 'store']);
     Route::get('/kategoris/{id}', [KategoriController::class, 'show']);
@@ -22,6 +23,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/bahans/{id}', [BahanController::class, 'show']);
     Route::put('/bahans/{id}', [BahanController::class, 'update']);
     Route::delete('/bahans/{id}', [BahanController::class, 'destroy']);
+
+    Route::get('/produks', [ProdukController::class, 'index']);
+    Route::post('/produks', [ProdukController::class, 'store']);
+    Route::get('/produks/{id}', [ProdukController::class, 'show']);
+    Route::put('/produks/{id}', [ProdukController::class, 'update']);
+    Route::delete('/produks/{id}', [ProdukController::class, 'destroy']);
 
     Route::get('/pelanggans', [PelanggansController::class, 'index']);
     Route::post('/pelanggans', [PelanggansController::class, 'store']);

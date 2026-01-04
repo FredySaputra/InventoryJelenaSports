@@ -17,6 +17,8 @@ class SizeResource extends JsonResource
         return [
             'id' => $this->id,
             'tipe' => $this->tipe,
+            'panjang' => $this->panjang,
+            'lebar' => $this->lebar,
         ];
     }
 }

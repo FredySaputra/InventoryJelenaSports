@@ -18,6 +18,8 @@ class StoreSizeRequest extends FormRequest
         return [
             'id' => 'required|string|max:100|unique:sizes,id',
             'tipe' => 'required|string|max:100',
+            'panjang' => 'nullable|numeric|min:0',
+            'lebar' => 'nullable|numeric|min:0'
         ];
     }
 

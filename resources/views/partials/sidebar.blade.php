@@ -20,6 +20,12 @@
         </li>
 
         <li>
+            <a href="/size" class="{{ request()->is('size*') ? 'active' : '' }}">
+                Ukuran Produk
+            </a>
+        </li>
+
+        <li>
             <a href="/stok-barang" class="{{ request()->is('stok-barang') ? 'active' : '' }}">
                 Stok Barang
             </a>

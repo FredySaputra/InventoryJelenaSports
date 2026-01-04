@@ -12,3 +12,4 @@ Route::view('/barang-keluar', 'admin.barang_keluar');
 Route::view('/karyawan', 'admin.karyawan');
 Route::view('/kategori-bahan', 'admin.kategori_bahan');
 Route::view('/produk','admin.produk')->name('produk');
+Route::view('/size','admin.size')->name('size');

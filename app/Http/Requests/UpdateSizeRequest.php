@@ -24,7 +24,9 @@ class UpdateSizeRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'tipe' => 'required|string|max:100'
+            'tipe' => 'required|string|max:100',
+            'panjang' => 'nullable|numeric|min:0',
+            'lebar' => 'nullable|numeric|min:0'
         ];
     }
 

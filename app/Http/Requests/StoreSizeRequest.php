@@ -6,34 +6,26 @@ use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
-class StoreProdukRequest extends FormRequest
+class StoreSizeRequest extends FormRequest
 {
-
     public function authorize(): bool
     {
         return $this->user() && $this->user()->role === 'Admin';
     }
 
-    /**
-     *
-     */
     public function rules(): array
     {
         return [
-            'id' => 'required|string|max:100|unique:produks,id',
-            'nama' => 'required|string|max:100',
-            'warna' => 'nullable|string|max:50',
-            'idKategori' => 'required|exists:kategoris,id',
-            'idBahan' => 'required|exists:bahans,id',
+            'id' => 'required|string|max:100|unique:sizes,id',
+            'tipe' => 'required|string|max:100',
         ];
     }
 
     public function messages(): array
     {
         return [
-            'id.unique' => 'Kode Produk (ID) ini sudah terdaftar.',
-            'idKategori.exists' => 'Kategori yang dipilih tidak valid.',
-            'idBahan.exists' => 'Bahan yang dipilih tidak valid.'
+            'id.unique' => 'ID Size ini sudah terdaftar, gunakan ID lain.',
+            'id.required' => 'ID Size wajib diisi.',
         ];
     }
 

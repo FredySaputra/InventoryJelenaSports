@@ -13,17 +13,14 @@ class KategoriSeeder extends Seeder
      */
     public function run(): void
     {
-        $data = [
-            [
-                'id' => 'KAT-01',
-                'nama' => 'Baju Beladiri'
-            ],
-            [
-                'id' => 'KAT-02',
-                'nama' => 'Sabuk'
-            ]
-        ];
+        Kategori::updateOrCreate(['id' => 'KAT-01'], [
+            'nama' => 'Baju Beladiri',
+            'prefix_size' => 'BJU'
+        ]);
 
-        Kategori::insert($data);
+        Kategori::updateOrCreate(['id' => 'KAT-02'], [
+            'nama' => 'Sabuk',
+            'prefix_size' => 'SBK'
+        ]);
     }
 }

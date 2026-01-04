@@ -7,6 +7,8 @@ use App\Http\Controllers\Api\PelanggansController;
 use App\Http\Controllers\Api\KategoriController;
 use App\Http\Controllers\Api\BahanController;
 use App\Http\Controllers\Api\ProdukController;
+use App\Http\Controllers\Api\StokController;
+use App\Http\Controllers\Api\SizeController;
 
 Route::post('/users/login', [UserController::class, 'login']);
 
@@ -35,4 +37,13 @@ Route::middleware('auth:api')->group(function () {
     Route::get('/pelanggans/{id}', [PelanggansController::class, 'show']);
     Route::put('/pelanggans/{id}', [PelanggansController::class, 'update']);
     Route::delete('/pelanggans/{id}', [PelanggansController::class, 'destroy']);
+
+    Route::get('/sizes', [SizeController::class, 'index']);
+    Route::post('/sizes', [SizeController::class, 'store']);
+    Route::get('/sizes/{id}', [SizeController::class, 'show']);
+    Route::put('/sizes/{id}', [SizeController::class, 'update']);
+    Route::delete('/sizes/{id}', [SizeController::class, 'destroy']);
+
+    Route::get('/stoks', [StokController::class, 'index']);
+    Route::post('/stoks', [StokController::class, 'update']);
 });

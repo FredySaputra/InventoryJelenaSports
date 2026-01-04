@@ -8,12 +8,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Stok extends Model
 {
     protected $table = 'stoks';
-    protected $primaryKey = ['idSize','idProduk'];
-    protected $keyType = 'string';
-    public $incrementing = false;
-    public $timestamps = false;
 
+    public $timestamps = true;
     protected $fillable = [
+        'idProduk',
+        'idSize',
         'stok'
     ];
 

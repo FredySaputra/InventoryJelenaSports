@@ -12,9 +12,12 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('stoks', function (Blueprint $table) {
+            $table->id();
+
             $table->string('idSize')->nullable(false);
             $table->string('idProduk')->nullable(false);
             $table->integer('stok')->default(0)->nullable(false);
+            $table->timestamps();
 
             $table->foreign('idSize')->on('sizes')->references('id');
             $table->foreign('idProduk')->on('produks')->references('id');

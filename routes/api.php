@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\ProdukController;
 use App\Http\Controllers\Api\StokController;
 use App\Http\Controllers\Api\SizeController;
 use App\Http\Controllers\Api\BarangKeluarController;
+use App\Http\Controllers\Api\KaryawanController;
 
 Route::post('/users/login', [UserController::class, 'login']);
 
@@ -50,4 +51,10 @@ Route::middleware('auth:api')->group(function () {
 
     Route::get('/barang-keluar', [BarangKeluarController::class, 'index']);
     Route::post('/barang-keluar', [BarangKeluarController::class, 'store']);
+
+    Route::get('/karyawan', [KaryawanController::class, 'index']);
+    Route::post('/karyawan', [KaryawanController::class, 'store']);
+    Route::get('/karyawan/{id}', [KaryawanController::class, 'show']);
+    Route::put('/karyawan/{id}', [KaryawanController::class, 'update']);
+    Route::delete('/karyawan/{id}', [KaryawanController::class, 'destroy']);
 });

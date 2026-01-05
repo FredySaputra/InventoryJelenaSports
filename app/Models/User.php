@@ -18,13 +18,7 @@ class User extends Authenticatable implements JWTSubject
     protected $keyType = 'string';
     public $incrementing = false;
     public $timestamps = false;
-    protected $fillable = [
-        'nama',
-        'noTelp',
-        'username',
-        'password',
-        'role'
-    ];
+    protected $guarded = [];
 
     public function produk() : HasMany
     {

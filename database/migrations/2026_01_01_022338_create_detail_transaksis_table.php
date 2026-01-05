@@ -14,11 +14,13 @@ return new class extends Migration
         Schema::create('detail_transaksis', function (Blueprint $table) {
             $table->string('idTransaksi')->nullable(false);
             $table->string('idProduk')->nullable(false);
-            $table->decimal('harga')->default(0)->nullable(false);
+            $table->string('idSize')->nullable(false);
+            $table->decimal('hargaProduk',15,2)->default(0)->nullable(false);
             $table->integer('jumlah')->default(0)->nullable(false);
-
+            $table->timestamps();
             $table->foreign('idTransaksi')->on('transaksis')->references('id');
             $table->foreign('idProduk')->on('produks')->references('id');
+            $table->foreign('idSize')->on('sizes')->references('id');
         });
     }
 

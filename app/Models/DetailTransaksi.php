@@ -8,13 +8,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class DetailTransaksi extends Model
 {
     protected $table = 'detail_transaksis';
-    protected $primaryKey = ['idTransaksi','idProduk'];
     public $timestamps = false;
-    public $incrementing = false;
-    protected $fillable = [
-        'harga',
-        'jumlah'
-    ];
+    protected $guarded = [];
     public function produk() : BelongsTo
     {
         return $this->belongsTo(Produk::class,'idProduk','id');
@@ -23,6 +18,11 @@ class DetailTransaksi extends Model
     public function transaksi() : BelongsTo
     {
         return $this->belongsTo(Transaksi::class,'idTransaksi','id');
+    }
+
+    public function size() : BelongsTo
+    {
+        return $this->belongsTo(Size::class, 'idSize', 'id');
     }
 
 }

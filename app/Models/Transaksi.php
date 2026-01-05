@@ -12,14 +12,12 @@ class Transaksi extends Model
     protected $primaryKey = 'id';
     protected $keyType = 'string';
     public $incrementing = false;
-    public $timestamps = false;
+    public $timestamps = true;
 
-    protected $fillable = [
-        'tanggalTransaksi',
-        'totalTransaksi'
-    ];
+    protected $guarded = [];
 
-    public function detailTransaksi() : HasMany
+
+    public function details() : HasMany
     {
         return $this->hasMany(DetailTransaksi::class,'idTransaksi','id');
     }

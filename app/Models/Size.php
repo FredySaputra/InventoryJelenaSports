@@ -23,4 +23,9 @@ class Size extends Model
     {
         return $this->hasMany(Stok::class, 'idSize', 'id');
     }
+
+    public function detail_transaksis()
+    {
+        return $this->hasMany(DetailTransaksi::class, 'idSize', 'id');
+    }
 }

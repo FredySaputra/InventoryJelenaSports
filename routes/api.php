@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\BahanController;
 use App\Http\Controllers\Api\ProdukController;
 use App\Http\Controllers\Api\StokController;
 use App\Http\Controllers\Api\SizeController;
+use App\Http\Controllers\Api\BarangKeluarController;
 
 Route::post('/users/login', [UserController::class, 'login']);
 
@@ -46,4 +47,7 @@ Route::middleware('auth:api')->group(function () {
 
     Route::get('/stoks', [StokController::class, 'index']);
     Route::post('/stoks', [StokController::class, 'update']);
+
+    Route::get('/barang-keluar', [BarangKeluarController::class, 'index']);
+    Route::post('/barang-keluar', [BarangKeluarController::class, 'store']);
 });

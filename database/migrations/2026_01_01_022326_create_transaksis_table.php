@@ -14,8 +14,10 @@ return new class extends Migration
         Schema::create('transaksis', function (Blueprint $table) {
             $table->string('id', 100)->primary();
             $table->date('tanggalTransaksi')->nullable(false);
-            $table->decimal('totalTransaksi')->default(0)->nullable(false);
+            $table->decimal('totalTransaksi',15,2)->default(0)->nullable(false);
+            $table->integer('totalItem')->default(0);
             $table->string('idPelanggan')->nullable(false);
+            $table->timestamps();
 
             $table->foreign('idPelanggan')->on('pelanggans')->references('id');
         });

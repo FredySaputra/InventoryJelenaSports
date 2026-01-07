@@ -14,7 +14,7 @@ class BarangKeluarController extends Controller
 {
     public function index()
     {
-        $transaksis = Transaksi::with(['pelanggan', 'details.produk'])
+        $transaksis = Transaksi::with(['pelanggan', 'details.produk.bahan', 'details.size'])
             ->orderBy('created_at', 'desc')
             ->get();
 
@@ -77,7 +77,7 @@ class BarangKeluarController extends Controller
                 ]);
             }
 
-            return new TransaksiResource($transaksi->load('details.produk', 'details.size'));
+            return new TransaksiResource($transaksi->load('details.produk.bahan', 'details.size'));
         });
     }
 }

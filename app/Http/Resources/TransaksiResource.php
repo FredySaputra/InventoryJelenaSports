@@ -22,8 +22,18 @@ class TransaksiResource extends JsonResource
             }),
             'items' => $this->whenLoaded('details', function() {
                 return $this->details->map(function($detail) {
+
+                    $produk = $detail->produk;
+                    $namaLengkap = 'Produk Terhapus';
+
+                    if ($produk) {
+                        $namaBahan = $produk->bahan ? $produk->bahan->nama : '';
+                        $warna = $produk->warna ?? '';
+
+                        $namaLengkap = trim($produk->nama . ' ' . $warna . ' ' . $namaBahan);
+                    }
                     return [
-                        'produk' => $detail->produk->nama ?? 'Produk Terhapus',
+                        'produk' => $namaLengkap,
                         'size' => $detail->size->tipe ?? '-',
                         'jumlah' => $detail->jumlah,
                         'harga_satuan' => $detail->hargaProduk,

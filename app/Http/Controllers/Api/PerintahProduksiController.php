@@ -7,6 +7,9 @@ use App\Models\DetailPerintahProduksi;
 use App\Models\ProgresProduksi;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use App\Models\Stok;
+use App\Models\Produk;
+
 
 class PerintahProduksiController extends Controller
 {
@@ -66,6 +69,7 @@ class PerintahProduksiController extends Controller
         $formatted = $data->map(function($spk) {
             return [
                 'id_spk' => $spk->id,
+                'status' => $spk->status,
                 'target_date' => $spk->tanggal_target,
                 'pelanggan' => $spk->pelanggan ? $spk->pelanggan->nama : 'Stok Gudang',
                 'catatan' => $spk->catatan,
@@ -273,5 +277,114 @@ class PerintahProduksiController extends Controller
         return response()->json($sizes);
     }
 
+    public function getRiwayatAndroid()
+    {
+        $user = auth()->user();
 
+        $histories = \App\Models\ProgresProduksi::with(['detail.produk', 'detail.size']) 
+            ->where('idKaryawan', $user->id)
+            ->where('status', 'Disetujui')
+            ->orderBy('waktu_setor', 'desc')
+            ->get();
+
+        $formatted = $histories->map(function($item) {
+            // Cek null safety
+            if (!$item->detail) return null; 
+
+            $idSpk = $item->detail->idPerintahProduksi;
+            $type = ($idSpk === 'SPK-DIRECT') ? 'Masuk' : 'Keluar';
+
+            $produk = $item->detail->produk;
+            // Cek null safety produk
+            $namaProduk = $produk ? $produk->nama : 'Unknown';
+            $namaWarna = $produk ? ($produk->warna ?? '') : '';
+            $namaBahan = ($produk && $produk->bahan) ? $produk->bahan->nama : '';
+
+            $namaBarang = trim($namaProduk . ' ' . $namaWarna . ' ' . $namaBahan);
+
+            return [
+                'id' => $item->id,
+                'nama_barang' => $namaBarang,
+                'ukuran' => $item->detail->size->tipe ?? '-',
+                'jumlah' => $item->jumlah_disetor,
+                'type' => $type,
+                'tanggal' => \Carbon\Carbon::parse($item->waktu_setor)
+                ->setTimezone('Asia/Jakarta')
+                ->format('d F Y, H.i'),
+                        ];
+        })->filter(); // Filter data yang null (jika ada error detail)
+
+        return response()->json([
+            'success' => true,
+            'data' => $formatted->values() // Reset index array
+        ]);
+    }
+
+    public function getDashboardSummary()
+{
+    // 1. Hitung Total Produk (Count semua data di tabel produk)
+    $totalProduk = Produk::count();
+
+    // 2. Hitung Stok Menipis
+    // Logic: Cari di tabel 'stoks' dimana kolom 'stok' lebih kecil dari 'min_stok'
+    $stokMenipis = Stok::whereColumn('stok', '<', 'min_stok')->count();
+
+    // 3. Hitung "Harus Ditambahkan" (Opsional/Sesuai logika bisnis Anda)
+    // Contoh: Menghitung berapa varian/detail yang sedang dalam pengerjaan (SPK Aktif)
+    // dan belum selesai targetnya.
+    $harusDitambahkan = DetailPerintahProduksi::whereHas('perintahProduksi', function($q) {
+        $q->where('status', 'Proses'); // Hanya SPK yang statusnya Proses
+    })->whereColumn('jumlah_selesai', '<', 'jumlah_target')->count();
+
+    return response()->json([
+        'status' => 'success',
+        'data' => [
+            'total_produk' => $totalProduk,
+            'stok_menipis' => $stokMenipis,
+            'harus_ditambahkan' => $harusDitambahkan
+        ]
+    ]);
+}
+
+public function getLowStockList()
+{
+    // 1. Ambil data stok yang di bawah batas minimal (stok < min_stok)
+    // Kita load relasi 'produk' dan 'size' agar bisa ambil namanya
+    $stokMenipis = Stok::with(['produk', 'size'])
+        ->whereColumn('stok', '<', 'min_stok')
+        ->get();
+
+    // 2. Format data untuk response JSON
+    $data = $stokMenipis->map(function ($item) {
+        
+        // Hitung selisih (Kekurangan)
+        $kekurangan = $item->min_stok - $item->stok;
+
+        // Ambil nama size (sesuaikan 'nama_size' atau 'tipe' dengan kolom di tabel sizes Anda)
+        // Saya gunakan null coalescing (??) biar tidak error jika data size terhapus
+        $namaSize = $item->size->nama_size ?? $item->size->tipe ?? '-';
+        $namaProduk = $item->produk->nama ?? 'Produk Tidak Ditemukan';
+
+        return [
+            'id_stok'       => $item->id,
+            'nama_produk'   => $namaProduk, 
+            'size'          => $namaSize,     
+            'stok_saat_ini' => (int) $item->stok,
+            'min_stok'      => (int) $item->min_stok,
+            'kekurangan'    => (int) $kekurangan, // <--- Ini angka yang Anda butuhkan (Misal: 49)
+            
+            // Optional: String siap pakai untuk Android (bisa dipakai, bisa tidak)
+            'display_text'  => "{$namaProduk} - Size : {$namaSize} - kekurangan sebanyak {$kekurangan}"
+        ];
+    });
+
+    // 3. Sorting: Urutkan dari yang kekurangannya paling parah (paling banyak kurangnya)
+    $sortedData = $data->sortByDesc('kekurangan')->values();
+
+    return response()->json([
+        'status' => 'success',
+        'total_items' => $sortedData->count(),
+        'data' => $sortedData
+    ]);
+}
 }

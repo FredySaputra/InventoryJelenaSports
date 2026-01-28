@@ -3,15 +3,22 @@
 @section('title', 'Verifikasi Hasil Produksi')
 
 @section('content')
+    {{-- 1. BAGIAN UTAMA: TABEL VERIFIKASI --}}
     <div class="card shadow-sm border-0">
         <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
             <div>
                 <h5 class="fw-bold m-0 text-primary">Verifikasi Setoran Karyawan</h5>
                 <small class="text-muted">Validasi hasil kerja sebelum masuk stok.</small>
             </div>
-            <button class="btn btn-sm btn-outline-primary" onclick="loadVerifikasi()">
-                <i class="fas fa-sync-alt"></i> Refresh
-            </button>
+            <div>
+                <button class="btn btn-sm btn-warning me-2 fw-bold text-dark" onclick="openLeaderboard()">
+                    <i class="fas fa-trophy me-1"></i> Leaderboard
+                </button>
+                
+                <button class="btn btn-sm btn-outline-primary" onclick="loadVerifikasi()">
+                    <i class="fas fa-sync-alt"></i> Refresh
+                </button>
+            </div>
         </div>
 
         <div class="card-body p-0">
@@ -27,13 +34,14 @@
                     </tr>
                     </thead>
                     <tbody id="tableData">
-                    <tr><td colspan="5" class="text-center py-5">Memuat data...</td></tr>
+                        <tr><td colspan="5" class="text-center py-5">Memuat data...</td></tr>
                     </tbody>
                 </table>
             </div>
         </div>
     </div>
 
+    {{-- 2. MODAL VERIFIKASI (TERIMA) --}}
     <div class="modal fade" id="modalTerima" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -57,6 +65,66 @@
             </div>
         </div>
     </div>
+
+    {{-- 3. MODAL LEADERBOARD --}}
+    <div class="modal fade" id="modalLeaderboard" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header bg-warning bg-gradient text-dark">
+                    <h5 class="modal-title fw-bold"><i class="fas fa-crown me-2"></i>Top Performa Karyawan</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-0">
+                    <div class="bg-white p-3 border-bottom">
+                        <div class="row g-2 align-items-end">
+                            <div class="col-md-4">
+                                <label class="small text-muted fw-bold">Dari Tanggal</label>
+                                <input type="date" id="filterStartDate" class="form-control form-control-sm">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="small text-muted fw-bold">Sampai Tanggal</label>
+                                <input type="date" id="filterEndDate" class="form-control form-control-sm">
+                            </div>
+                            <div class="col-md-4 d-flex gap-1">
+                                <button class="btn btn-primary btn-sm w-100 fw-bold" onclick="fetchLeaderboard()">
+                                    <i class="fas fa-filter"></i> Terapkan
+                                </button>
+                                <button class="btn btn-outline-secondary btn-sm" onclick="resetFilter()" title="Reset ke Bulan Ini">
+                                    <i class="fas fa-undo"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="px-3 py-2 bg-light border-bottom d-flex justify-content-between align-items-center">
+                        <span class="text-muted small">Periode Laporan:</span>
+                        <span class="fw-bold text-dark badge bg-warning text-dark" id="lblPeriode">Memuat...</span>
+                    </div>
+
+                    <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                        <table class="table table-striped mb-0">
+                            <thead class="small text-muted sticky-top bg-light">
+                                <tr>
+                                    <th class="ps-4" width="15%">Peringkat</th>
+                                    <th>Nama Karyawan</th>
+                                    <th class="text-end pe-4">Total Produksi (Pcs)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="leaderboardData">
+                                <tr><td colspan="3" class="text-center py-3">Memuat...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light py-2">
+                    <small class="text-muted fst-italic me-auto" style="font-size: 0.75rem;">
+                        *Data dihitung berdasarkan jumlah barang yang <b>lolos QC (Diterima)</b>.
+                    </small>
+                    <button type="button" class="btn btn-sm btn-dark" data-bs-dismiss="modal">Tutup</button>
+                </div>
+            </div>
+        </div>
+    </div>
 @endsection
 
 @push('scripts')
@@ -69,13 +137,101 @@
                 window.location.href = '/login';
                 return;
             }
+            
+            // Default filter visual saja
+            const today = new Date().toISOString().split('T')[0];
+            const firstDay = today.substring(0, 8) + '01'; 
+            
+            const elStart = document.getElementById('filterStartDate');
+            const elEnd = document.getElementById('filterEndDate');
+            
+            if(elStart) elStart.value = firstDay;
+            if(elEnd) elEnd.value = today;
+
             loadVerifikasi();
         });
 
+        // --- FUNGSI LEADERBOARD ---
+        function openLeaderboard() {
+            const modalEl = document.getElementById('modalLeaderboard');
+            if(modalEl) {
+                const modal = new bootstrap.Modal(modalEl);
+                modal.show();
+                resetFilter(); 
+            }
+        }
+
+        function resetFilter() {
+            document.getElementById('filterStartDate').value = '';
+            document.getElementById('filterEndDate').value = '';
+            fetchLeaderboard();
+        }
+
+        async function fetchLeaderboard() {
+            const tbody = document.getElementById('leaderboardData');
+            const lblPeriode = document.getElementById('lblPeriode');
+            
+            const startDate = document.getElementById('filterStartDate').value;
+            const endDate = document.getElementById('filterEndDate').value;
+
+            tbody.innerHTML = '<tr><td colspan="3" class="text-center py-5"><div class="spinner-border text-warning spinner-border-sm"></div> Memuat data...</td></tr>';
+
+            try {
+                let url = '/api/progres-produksi/leaderboard';
+                
+                // Kirim parameter tanggal hanya jika user memilih
+                if(startDate && endDate) {
+                    url += `?start_date=${startDate}&end_date=${endDate}`;
+                }
+
+                const res = await fetch(url, {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                
+                const json = await res.json();
+                
+                if(lblPeriode) lblPeriode.innerText = json.periode || '-';
+
+                if (json.data && json.data.length > 0) {
+                    tbody.innerHTML = '';
+                    json.data.forEach(item => {
+                        let rankDisplay = `<span class="fw-bold text-muted">#${item.rank}</span>`;
+                        let rowClass = "";
+
+                        if(item.rank === 1) {
+                            rankDisplay = `<i class="fas fa-medal text-warning fa-lg"></i>`;
+                            rowClass = "bg-warning bg-opacity-10";
+                        } else if(item.rank === 2) {
+                            rankDisplay = `<i class="fas fa-medal text-secondary fa-lg"></i>`;
+                        } else if(item.rank === 3) {
+                            rankDisplay = `<i class="fas fa-medal" style="color: #CD7F32;"></i>`;
+                        }
+
+                        tbody.innerHTML += `
+                        <tr class="${rowClass}">
+                            <td class="ps-4 text-center align-middle">${rankDisplay}</td>
+                            <td class="fw-bold align-middle">${item.nama}</td>
+                            <td class="text-end pe-4 align-middle">
+                                <span class="badge bg-primary rounded-pill fs-6">${item.total}</span>
+                            </td>
+                        </tr>`;
+                    });
+                } else {
+                    tbody.innerHTML = `<tr><td colspan="3" class="text-center py-5 text-muted">
+                        <i class="fas fa-calendar-times fa-2x mb-2"></i><br>
+                        Tidak ada data produksi pada periode ini.
+                    </td></tr>`;
+                }
+
+            } catch (error) {
+                console.error(error);
+                tbody.innerHTML = `<tr><td colspan="3" class="text-center text-danger py-3">Gagal memuat leaderboard.</td></tr>`;
+            }
+        }
+
+        // --- FUNGSI LOAD VERIFIKASI (SAMA) ---
         async function loadVerifikasi() {
             const tbody = document.getElementById('tableData');
-
-            // Safety check element
             if (!tbody) return;
 
             tbody.innerHTML = '<tr><td colspan="5" class="text-center py-5"><div class="spinner-border text-primary"></div></td></tr>';
@@ -86,61 +242,35 @@
                 });
                 const json = await res.json();
 
-                // Cek apakah data ada
                 if (json.data && json.data.length > 0) {
                     tbody.innerHTML = '';
-
                     json.data.forEach(item => {
-                        // --- PERBAIKAN DI SINI (SESUAI CONTROLLER BARU) ---
-
-                        // 1. Ambil ID Progres
-                        const idProgres = item.id_progres;
-
-                        // 2. Ambil Jumlah (Perhatikan nama key-nya: jumlah_setor)
-                        const jumlah = item.jumlah_setor;
-
-                        // 3. Ambil Nama Karyawan (Controller sudah mengirim string nama, bukan object)
-                        const namaKaryawan = item.karyawan;
-
-                        // 4. Ambil Produk & Size (Controller sudah mengirim string, bukan object)
-                        const namaProduk = item.produk;
-                        const namaSize = item.size;
-
-                        // 5. Format Waktu (Karena Controller kirim raw date string)
-                        // Kita format ulang di JS biar cantik
                         const dateObj = new Date(item.waktu);
                         const waktuStr = dateObj.toLocaleDateString('id-ID', {
                             day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
-                        }).replace('.', ':'); // Ganti pemisah jam
+                        }).replace('.', ':');
 
-                        // Render HTML
                         tbody.innerHTML += `
                         <tr>
                             <td class="ps-4 small text-muted">${waktuStr}</td>
-                            <td class="fw-bold text-dark">${namaKaryawan}</td>
+                            <td class="fw-bold text-dark">${item.karyawan}</td>
                             <td>
-                                <div class="fw-bold">${namaProduk}</div>
-                                <span class="badge bg-light text-dark border">Size: ${namaSize}</span>
+                                <div class="fw-bold">${item.produk}</div>
+                                <span class="badge bg-light text-dark border">Size: ${item.size}</span>
                             </td>
-                            <td class="text-center fw-bold text-primary" style="font-size: 1.2em;">${jumlah}</td>
+                            <td class="text-center fw-bold text-primary" style="font-size: 1.2em;">${item.jumlah_setor}</td>
                             <td class="text-end pe-4">
-                                <button class="btn btn-danger btn-sm me-1" onclick="reject('${idProgres}')" title="Tolak">
+                                <button class="btn btn-danger btn-sm me-1" onclick="reject('${item.id_progres}')" title="Tolak">
                                     <i class="fas fa-times"></i>
                                 </button>
-                                <button class="btn btn-success btn-sm" onclick="openModalTerima('${idProgres}', ${jumlah})" title="Terima">
+                                <button class="btn btn-success btn-sm" onclick="openModalTerima('${item.id_progres}', ${item.jumlah_setor})" title="Terima">
                                     <i class="fas fa-check"></i> Proses
                                 </button>
                             </td>
-                        </tr>
-                    `;
+                        </tr>`;
                     });
                 } else {
-                    tbody.innerHTML = `
-                    <tr>
-                        <td colspan="5" class="text-center py-5">
-                            <p class="text-muted m-0">Tidak ada setoran yang menunggu verifikasi.</p>
-                        </td>
-                    </tr>`;
+                    tbody.innerHTML = `<tr><td colspan="5" class="text-center py-5 text-muted">Tidak ada setoran yang menunggu verifikasi.</td></tr>`;
                 }
             } catch (error) {
                 console.error(error);
@@ -163,7 +293,6 @@
                 alert("Jumlah tidak valid!"); return;
             }
 
-            // Efek Loading pada tombol (Optional, biar user tau sedang proses)
             const btnSimpan = document.querySelector('#modalTerima .btn-success');
             const textAsli = btnSimpan.innerText;
             btnSimpan.innerText = 'Menyimpan...';
@@ -171,10 +300,10 @@
 
             try {
                 const res = await fetch(`/api/progres-produksi/${id}/konfirmasi`, {
-                    method: 'POST', // <--- WAJIB ADA
+                    method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json', // <--- WAJIB ADA
-                        'Authorization': 'Bearer ' + token  // <--- WAJIB ADA
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + token
                     },
                     body: JSON.stringify({
                         action: 'approve',
@@ -182,40 +311,28 @@
                     })
                 });
 
-                // Cek response teks dulu untuk jaga-jaga kalau errornya HTML (bukan JSON)
                 const textResponse = await res.text();
-
                 let json;
-                try {
-                    json = JSON.parse(textResponse);
-                } catch (err) {
-                    console.error("Server Error HTML:", textResponse);
-                    throw new Error("Terjadi kesalahan di server (Cek Console).");
-                }
+                try { json = JSON.parse(textResponse); } catch (err) { throw new Error("Terjadi kesalahan di server."); }
 
                 if (res.ok) {
-                    // Tutup Modal Dulu
                     const modalEl = document.getElementById('modalTerima');
                     const modal = bootstrap.Modal.getInstance(modalEl);
                     modal.hide();
-
                     alert("Berhasil! Stok bertambah.");
-                    loadVerifikasi(); // Refresh tabel
+                    loadVerifikasi();
                 } else {
                     alert("Gagal: " + (json.message || "Error server"));
-                    // Jika gagal, tetap refresh agar data terbaru (misal sudah diproses orang lain) muncul
                     loadVerifikasi();
                 }
             } catch (e) {
                 alert("Error: " + e.message);
             } finally {
-                // Kembalikan tombol seperti semula
                 btnSimpan.innerText = textAsli;
                 btnSimpan.disabled = false;
             }
         }
 
-        // --- LOGIKA TOLAK ---
         async function reject(id) {
             if(!confirm('Yakin ingin menolak setoran ini? Stok TIDAK akan bertambah.')) return;
 
@@ -231,16 +348,14 @@
                         jumlah_diterima: 0
                     })
                 });
-
-                // --- TAMBAHAN PENTING ---
-                const json = await res.json(); // Baca response dulu
-
+                
+                const json = await res.json();
                 if (res.ok) {
                     alert("Laporan berhasil ditolak.");
-                    loadVerifikasi(); // <--- WAJIB: Refresh tabel agar data hilang dari layar
+                    loadVerifikasi();
                 } else {
                     alert("Gagal: " + json.message);
-                    loadVerifikasi(); // Refresh juga kalau gagal, biar data status terbaru muncul
+                    loadVerifikasi();
                 }
             } catch (e) {
                 alert("Error koneksi");

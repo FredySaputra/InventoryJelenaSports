@@ -6,20 +6,20 @@ use App\Models\ProgresProduksi;
 use App\Models\Stok;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Carbon\Carbon; // <--- WAJIB DITAMBAHKAN AGAR TIDAK ERROR 500
 
 class AdminProduksiController extends Controller
 {
+    // ... method konfirmasiPekerjaan tetap sama ...
     public function konfirmasiPekerjaan(Request $request, $idProgres)
     {
-        // 1. Cari data dulu
+        // ... (kode sama seperti yang Anda kirim, tidak perlu diubah) ...
         $progres = ProgresProduksi::with('detail')->find($idProgres);
 
         if (!$progres) {
             return response()->json(['message' => 'Data tidak ditemukan'], 404);
         }
 
-        // 2. Cek Status (Gunakan strtolower agar tidak sensitif huruf besar/kecil)
-        // Trim untuk membuang spasi yang tidak sengaja terbawa di database
         if (trim(strtolower($progres->status)) !== 'menunggu') {
             return response()->json([
                 'message' => 'Gagal: Data ini statusnya sudah bukan Menunggu (Status: ' . $progres->status . ')'
@@ -27,10 +27,7 @@ class AdminProduksiController extends Controller
         }
 
         return DB::transaction(function () use ($request, $progres) {
-
-            // --- SKENARIO 1: TOLAK (REJECT) ---
             if ($request->action === 'reject') {
-                // Langsung update status jadi Ditolak tanpa validasi jumlah
                 $progres->update([
                     'status' => 'Ditolak',
                     'waktu_konfirmasi' => now()
@@ -38,34 +35,27 @@ class AdminProduksiController extends Controller
                 return response()->json(['message' => 'Laporan berhasil ditolak.']);
             }
 
-            // --- SKENARIO 2: TERIMA (APPROVE) ---
-            // Baru kita validasi jumlah jika aksinya approve
             $request->validate([
                 'jumlah_diterima' => 'required|integer|min:0'
             ]);
 
-            // Update Status Progres
             $progres->update([
                 'status' => 'Disetujui',
                 'jumlah_diterima' => $request->jumlah_diterima,
                 'waktu_konfirmasi' => now()
             ]);
 
-            // Tambahkan ke Tabel STOK (Increment)
             $stok = Stok::firstOrCreate(
                 [
-                    'idProduk' => $progres->detail->idProduk, // ID String (KRT-TB)
-                    'idSize'   => $progres->detail->idSize    // ID String (BJU-S)
+                    'idProduk' => $progres->detail->idProduk,
+                    'idSize'   => $progres->detail->idSize
                 ],
                 ['stok' => 0]
             );
 
             $stok->increment('stok', $request->jumlah_diterima);
-
-            // Update target SPK
             $progres->detail->increment('jumlah_selesai', $request->jumlah_diterima);
 
-            // Cek apakah SPK Selesai (Logic update status SPK)
             $detailCurrent = $progres->detail;
             $spkInduk = $detailCurrent->perintahProduksi;
 
@@ -92,13 +82,11 @@ class AdminProduksiController extends Controller
         });
     }
 
-    // Tambahkan method ini di AdminProduksiController yang sudah Anda buat sebelumnya
     public function getPending()
     {
-        // 1. Load relasi 'bahan' juga lewat detail.produk.bahan
         $data = ProgresProduksi::with([
             'karyawan',
-            'detail.produk.bahan', // <--- TAMBAHAN PENTING
+            'detail.produk.bahan',
             'detail.size'
         ])
             ->where('status', 'Menunggu')
@@ -106,16 +94,11 @@ class AdminProduksiController extends Controller
             ->get();
 
         $formatted = $data->map(function($item) {
-
-            // Ambil object produk (jaga-jaga null)
             $produk = $item->detail->produk ?? null;
-
-            // LOGIKA PEMBUATAN NAMA LENGKAP (SAMA SEPERTI STOK)
             $namaLengkap = '-';
             if ($produk) {
                 $namaBahan = $produk->bahan ? $produk->bahan->nama : '';
                 $warna = $produk->warna ? $produk->warna : '';
-                // Gabung: Nama + Warna + Bahan
                 $namaLengkap = trim($produk->nama . ' ' . $warna . ' ' . $namaBahan);
             }
 
@@ -124,7 +107,7 @@ class AdminProduksiController extends Controller
                 'waktu'        => $item->waktu_setor,
                 'karyawan'     => $item->karyawan->nama ?? 'Unknown',
                 'no_spk'       => $item->detail->perintahProduksi->id ?? '-',
-                'produk'       => $namaLengkap, // <--- Pakai variabel yang sudah digabung tadi
+                'produk'       => $namaLengkap,
                 'size'         => $item->detail->size->tipe ?? '-',
                 'jumlah_setor' => $item->jumlah_disetor,
                 'id_detail'    => $item->idDetailProduksi
@@ -132,5 +115,49 @@ class AdminProduksiController extends Controller
         });
 
         return response()->json(['data' => $formatted]);
+    }
+
+    // --- PERBAIKAN METHOD LEADERBOARD ---
+    public function getLeaderboard(Request $request)
+    {
+        // Default: Bulan Ini
+        $startDate = Carbon::now()->startOfMonth();
+        $endDate   = Carbon::now()->endOfMonth();
+        $periodeLabel = Carbon::now()->translatedFormat('F Y'); 
+
+        // Jika ada filter tanggal
+        if ($request->has('start_date') && $request->has('end_date') && !empty($request->start_date) && !empty($request->end_date)) {
+            $startDate = Carbon::parse($request->start_date)->startOfDay();
+            $endDate   = Carbon::parse($request->end_date)->endOfDay();
+            $periodeLabel = $startDate->translatedFormat('d F Y') . ' - ' . $endDate->translatedFormat('d F Y');
+        }
+
+        // Query
+        $leaderboard = DB::table('progres_produksis')
+            ->join('users', 'progres_produksis.idKaryawan', '=', 'users.id')
+            ->where('progres_produksis.status', 'Disetujui')
+            ->whereBetween('progres_produksis.waktu_setor', [$startDate, $endDate])
+            ->select(
+                'users.nama as nama_karyawan',
+                DB::raw('SUM(progres_produksis.jumlah_diterima) as total_produksi')
+            )
+            ->groupBy('progres_produksis.idKaryawan', 'users.nama')
+            ->orderByDesc('total_produksi')
+            ->limit(10)
+            ->get();
+
+        // Formatting
+        $data = $leaderboard->map(function ($item, $index) {
+            return [
+                'rank' => $index + 1,
+                'nama' => $item->nama_karyawan,
+                'total' => (int) $item->total_produksi
+            ];
+        });
+
+        return response()->json([
+            'periode' => $periodeLabel,
+            'data' => $data
+        ]);
     }
 }

@@ -69,12 +69,16 @@ Route::middleware('auth:api')->group(function () {
 
     Route::get('/progres-produksi/pending', [AdminProduksiController::class, 'getPending']);
     Route::post('/progres-produksi/{id}/konfirmasi', [AdminProduksiController::class, 'konfirmasiPekerjaan']);
+    Route::get('/progres-produksi/leaderboard', [AdminProduksiController::class, 'getLeaderboard']);
 
     Route::get('/android/spk-aktif', [PerintahProduksiController::class, 'getSpkActive']);
     Route::post('/android/update-progress', [PerintahProduksiController::class, 'storeProgress']);
     Route::post('/android/barang-masuk', [PerintahProduksiController::class, 'storeDirectInput']);
     Route::get('/android/list-produk', [PerintahProduksiController::class, 'getProdukForAndroid']);
     Route::get('/android/list-size/{idProduk}', [PerintahProduksiController::class, 'getSizeByProduk']);
+    Route::get('/android/riwayat', [PerintahProduksiController::class, 'getRiwayatAndroid']);
+    Route::get('/android/dashboard', [PerintahProduksiController::class, 'getDashboardSummary']);
+    Route::get('/android/stok-menipis-list', [PerintahProduksiController::class, 'getLowStockList']);
 }
 
 

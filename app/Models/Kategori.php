@@ -22,7 +22,7 @@ class Kategori extends Model
         return $this->hasMany(Produk::class, 'idKategori', 'id');
     }
 
-    public function bahan() : HasMany
+    public function bahans() : HasMany
     {
         return $this->hasMany(Bahan::class, 'idKategori', 'id');
     }

@@ -33,10 +33,10 @@
         .stat-value { font-size: 1.8rem; font-weight: 800; color: #1e293b; margin-top: 5px; }
 
         /* Warna Aksen Kartu */
-        .border-l-primary { border-left: 5px solid #3b82f6; } /* Biru */
-        .border-l-success { border-left: 5px solid #10b981; } /* Hijau */
-        .border-l-warning { border-left: 5px solid #f59e0b; } /* Orange */
-        .border-l-info    { border-left: 5px solid #6366f1; } /* Indigo */
+        .border-l-primary { border-left: 5px solid #3b82f6; } 
+        .border-l-success { border-left: 5px solid #10b981; } 
+        .border-l-warning { border-left: 5px solid #f59e0b; } 
+        .border-l-info    { border-left: 5px solid #6366f1; } 
 
         /* 2. CHART SECTION */
         .chart-container {
@@ -49,6 +49,54 @@
 @endpush
 
 @section('content')
+
+    {{-- --- FITUR PERINGATAN STOK MENIPIS (BARU) --- --}}
+    @if(isset($lowStockCount) && $lowStockCount > 0)
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="alert alert-danger border-0 shadow-sm d-flex align-items-center" role="alert" style="border-left: 5px solid #dc3545;">
+                <div class="fs-1 me-4 text-danger">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <div class="flex-grow-1">
+                    <h5 class="alert-heading fw-bold mb-1">Perhatian: Stok Menipis!</h5>
+                    <p class="mb-0">
+                        Terdapat <strong class="fs-5">{{ $lowStockCount }}</strong> varian barang yang stoknya di bawah batas aman. 
+                        Segera lakukan produksi ulang.
+                    </p>
+                </div>
+                <div class="ms-auto d-none d-md-block">
+                    <a href="/stok-barang" class="btn btn-danger fw-bold shadow-sm">
+                        <i class="fas fa-boxes me-2"></i> Cek Stok
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-12">
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-header bg-danger text-white fw-bold">
+                    <i class="fas fa-list-ul me-2"></i> Daftar Barang Perlu Produksi (5 Barang Teratas Paling Sedikit)
+                </div>
+                <div class="list-group list-group-flush">
+                    @foreach($lowStockItems as $item)
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="fw-bold text-dark">{{ $item->produk->nama ?? '-' }}</span>
+                                <span class="badge bg-light text-dark border ms-2">Size: {{ $item->size->tipe ?? '-' }}</span>
+                                <div class="text-muted small">Min Stok: {{ $item->min_stok }}</div>
+                            </div>
+                            <div class="text-end">
+                                <span class="badge bg-danger rounded-pill fs-6">{{ $item->stok }} pcs</span>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+    {{-- --------------------------------------------- --}}
 
     <div class="row mb-4">
         <div class="col-md-3 mb-3">

@@ -35,4 +35,9 @@ class DetailPerintahProduksi extends Model
     {
         return $this->hasMany(ProgresProduksi::class, 'idDetailProduksi', 'id');
     }
+
+    public function spk()
+    {
+        return $this->belongsTo(PerintahProduksi::class, 'idPerintahProduksi', 'id');
+    }
 }

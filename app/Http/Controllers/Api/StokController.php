@@ -65,14 +65,22 @@ class StokController extends Controller
     {
         $validated = $request->validated();
 
+        $dataToUpdate = [];
+        
+        if ($request->has('min_stok')) {
+            $dataToUpdate['min_stok'] = $request->min_stok;
+        } 
+        
+        if ($request->has('jumlah')) {
+            $dataToUpdate['stok'] = $request->jumlah;
+        }
+
         $stok = Stok::updateOrCreate(
             [
                 'idProduk' => $validated['idProduk'],
                 'idSize'   => $validated['idSize']
             ],
-            [
-                'stok' => $validated['jumlah']
-            ]
+            $dataToUpdate
         );
 
         return new StokResource($stok);

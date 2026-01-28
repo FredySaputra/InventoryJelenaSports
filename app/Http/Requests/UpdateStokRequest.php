@@ -18,7 +18,8 @@ class UpdateStokRequest extends FormRequest
         return [
             'idProduk' => 'required|exists:produks,id',
             'idSize' => 'required|exists:sizes,id',
-            'jumlah' => 'required|integer|min:0',
+            'jumlah'   => 'nullable|integer|min:0',   
+            'min_stok' => 'nullable|integer|min:0',
         ];
     }
 

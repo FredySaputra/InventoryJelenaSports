@@ -15,10 +15,11 @@ class PerintahProduksiController extends Controller
 {
     public function index()
     {
-        // Ambil data SPK beserta Pelanggan dan total item
         $data = PerintahProduksi::with(['pelanggan', 'details'])
+            ->where('id', '!=', 'SPK-DIRECT') 
             ->orderBy('created_at', 'desc')
             ->get();
+
         return response()->json(['data' => $data]);
     }
 
@@ -348,37 +349,43 @@ class PerintahProduksiController extends Controller
 
 public function getLowStockList()
 {
-    // 1. Ambil data stok yang di bawah batas minimal (stok < min_stok)
-    // Kita load relasi 'produk' dan 'size' agar bisa ambil namanya
-    $stokMenipis = Stok::with(['produk', 'size'])
+    // 1. Load relasi 'produk.bahan' juga biar nama bahannya kebaca
+    $stokMenipis = \App\Models\Stok::with(['produk.bahan', 'size'])
         ->whereColumn('stok', '<', 'min_stok')
         ->get();
 
-    // 2. Format data untuk response JSON
     $data = $stokMenipis->map(function ($item) {
         
-        // Hitung selisih (Kekurangan)
-        $kekurangan = $item->min_stok - $item->stok;
+        // --- PERBAIKAN DI SINI ---
+        // Ambil objek produk
+        $produk = $item->produk;
 
-        // Ambil nama size (sesuaikan 'nama_size' atau 'tipe' dengan kolom di tabel sizes Anda)
-        // Saya gunakan null coalescing (??) biar tidak error jika data size terhapus
-        $namaSize = $item->size->nama_size ?? $item->size->tipe ?? '-';
-        $namaProduk = $item->produk->nama ?? 'Produk Tidak Ditemukan';
+        if ($produk) {
+            // Ambil detailnya
+            $namaDasar = $produk->nama;
+            $warna = $produk->warna ?? ''; 
+            $namaBahan = $produk->bahan ? $produk->bahan->nama : '';
+
+            // Gabung jadi satu: "Baju Silat" + "Merah" + "Drill"
+            $namaProdukLengkap = trim($namaDasar . ' ' . $warna . ' ' . $namaBahan);
+        } else {
+            $namaProdukLengkap = 'Produk Dihapus';
+        }
+        // -------------------------
+
+        $namaSize = $item->size->tipe ?? $item->size->nama_size ?? '-';
+        $kekurangan = $item->min_stok - $item->stok;
 
         return [
             'id_stok'       => $item->id,
-            'nama_produk'   => $namaProduk, 
-            'size'          => $namaSize,     
+            'nama_produk'   => $namaProdukLengkap, // <--- Kirim nama yang sudah lengkap
+            'size'          => $namaSize,       
             'stok_saat_ini' => (int) $item->stok,
             'min_stok'      => (int) $item->min_stok,
-            'kekurangan'    => (int) $kekurangan, // <--- Ini angka yang Anda butuhkan (Misal: 49)
-            
-            // Optional: String siap pakai untuk Android (bisa dipakai, bisa tidak)
-            'display_text'  => "{$namaProduk} - Size : {$namaSize} - kekurangan sebanyak {$kekurangan}"
+            'kekurangan'    => (int) $kekurangan, 
         ];
     });
 
-    // 3. Sorting: Urutkan dari yang kekurangannya paling parah (paling banyak kurangnya)
     $sortedData = $data->sortByDesc('kekurangan')->values();
 
     return response()->json([

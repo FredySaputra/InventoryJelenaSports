@@ -51,6 +51,12 @@
             transform: translateY(-1px); box-shadow: 0 4px 8px rgba(59, 130, 246, 0.4); color: white;
         }
 
+        .input-harga-tabel {
+            border: 1px solid #e2e8f0; border-radius: 6px; padding: 5px 10px; width: 100%; min-width: 100px; text-align: right; font-weight: bold; color: #0f172a;
+        }
+        .input-harga-tabel:focus { outline: 2px solid #3b82f6; border-color: transparent; }
+
+        /* Custom Modal Style */
         .custom-modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(15, 23, 42, 0.6);
@@ -70,7 +76,6 @@
             border-bottom: 1px solid #e2e8f0;
         }
         .custom-modal-body { padding: 25px; max-height: 70vh; overflow-y: auto; }
-
         .custom-modal-overlay.show { display: flex; opacity: 1; }
         .custom-modal-overlay.show .custom-modal-box { transform: scale(1); }
     </style>
@@ -110,12 +115,29 @@
     <div id="viewForm" style="display: none;">
         <div class="card mb-4" style="padding: 25px; border-radius: 12px; border:none; box-shadow:0 4px 6px -1px rgba(0,0,0,0.05); border-left: 5px solid #3b82f6;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
-                <h5 style="margin:0; font-weight:700; color:#1e293b;">Langkah 1: Data Pelanggan</h5>
+                <h5 style="margin:0; font-weight:700; color:#1e293b;">Form Transaksi Baru</h5>
                 <button class="btn-modern-back" onclick="switchView('list')">
                     <i class="fas fa-arrow-left"></i> Kembali
                 </button>
             </div>
             <hr class="my-3 text-muted opacity-25">
+            
+            <div class="row align-items-end mb-3">
+                <div class="col-md-4">
+                    <label class="form-label fw-bold text-primary small">SUMBER DATA TRANSAKSI</label>
+                    <select id="sumber_data" class="form-select-modern bg-white border-primary" onchange="toggleSumberData()">
+                        <option value="manual">Input Barang Manual (Stok Ready)</option>
+                        <option value="spk">Dari SPK (Pesanan Selesai Produksi)</option>
+                    </select>
+                </div>
+                <div class="col-md-4" id="div_pilih_spk" style="display: none;">
+                    <label class="form-label fw-bold text-muted small">PILIH SPK SELESAI</label>
+                    <select id="pilih_spk" class="form-select-modern" onchange="loadItemFromSpk()">
+                        <option value="">-- Pilih SPK --</option>
+                    </select>
+                </div>
+            </div>
+
             <div class="row align-items-center">
                 <div class="col-md-4">
                     <label class="form-label fw-bold text-muted small">TANGGAL TRANSAKSI</label>
@@ -126,13 +148,14 @@
                     <select id="pilih_pelanggan" class="form-select-modern" onchange="enableInputBarang()">
                         <option value="">-- Pilih Pelanggan Dahulu --</option>
                     </select>
-                    <small class="text-primary fst-italic mt-1 d-block">* Pilih pelanggan untuk membuka menu input barang.</small>
+                    <small id="hint_pelanggan" class="text-primary fst-italic mt-1 d-block">* Pilih pelanggan untuk membuka menu input barang.</small>
                 </div>
             </div>
         </div>
 
         <div id="sectionInputBarang" class="row" style="display: none; opacity: 0; transition: opacity 0.5s;">
-            <div class="col-md-4">
+            
+            <div class="col-md-4" id="boxInputManual">
                 <div class="card h-100" style="padding: 25px; border-radius: 12px; border:none; box-shadow:0 4px 6px rgba(0,0,0,0.05);">
                     <h5 style="margin-bottom: 20px; font-weight:700; color:#334155;">Langkah 2: Input Barang</h5>
 
@@ -173,27 +196,31 @@
                 </div>
             </div>
 
-            <div class="col-md-8">
+            <div class="col-md-8" id="boxKeranjang">
                 <div class="card h-100" style="padding: 25px; border-radius: 12px; border:none; box-shadow:0 4px 6px rgba(0,0,0,0.05);">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom:2px solid #f1f5f9; padding-bottom:15px;">
                         <h5 style="margin:0; font-weight:700; color:#334155;">List Barang Keluar</h5>
-                        <h4 style="margin:0; color:#2563eb; font-weight:800;">Total: Rp <span id="labelGrandTotal">0</span></h4>
+                        <h4 style="margin:0; color:#2563eb; font-weight:800;" id="labelTotalContainer">Total: Rp <span id="labelGrandTotal">0</span></h4>
                     </div>
 
-                    <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                    <div id="msgSpkMode" class="alert alert-info py-2" style="display: none;">
+                        <i class="fas fa-info-circle me-1"></i> Data barang diambil otomatis dari SPK. Silakan sesuaikan <b>Harga Jual</b> jika diperlukan.
+                    </div>
+
+                    <div class="table-responsive" style="max-height: 400px; overflow-y: auto;" id="containerTabelKeranjang">
                         <table class="table table-bordered table-striped align-middle">
                             <thead class="table-light sticky-top">
                             <tr>
                                 <th>Produk</th>
                                 <th>Size</th>
-                                <th class="text-end">Harga</th>
                                 <th class="text-center">Qty</th>
+                                <th class="text-end" style="width: 150px;">Harga Satuan (Rp)</th>
                                 <th class="text-end">Subtotal</th>
                                 <th class="text-center">Aksi</th>
                             </tr>
                             </thead>
                             <tbody id="keranjangBody">
-                            <tr><td colspan="6" class="text-center text-muted py-5">Keranjang kosong. Silakan input barang.</td></tr>
+                            <tr><td colspan="6" class="text-center text-muted py-5">Keranjang kosong.</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -252,14 +279,24 @@
 @endsection
 
 @push('scripts')
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
     <script>
         const token = localStorage.getItem('api_token');
 
         let keranjang = [];
         let produkList = [];
         let riwayatDataGlobal = [];
+        let spkList = [];
 
         const formatRupiah = (num) => new Intl.NumberFormat('id-ID').format(num);
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadRiwayatTransaksi(); 
+            loadPelanggan();
+            loadMasterProduk();
+            loadSpkList(); 
+        });
 
         function switchView(viewName) {
             const listDiv = document.getElementById('viewList');
@@ -270,6 +307,7 @@
                 formDiv.style.display = 'block';
                 loadPelanggan();
                 loadMasterProduk();
+                loadSpkList();
             } else {
                 listDiv.style.display = 'block';
                 formDiv.style.display = 'none';
@@ -278,11 +316,164 @@
             }
         }
 
+        // --- FITUR BARU: TOGGLE SUMBER DATA ---
+        function toggleSumberData() {
+            const sumber = document.getElementById('sumber_data').value;
+            const divSpk = document.getElementById('div_pilih_spk');
+            const boxManual = document.getElementById('boxInputManual');
+            const boxKeranjang = document.getElementById('boxKeranjang');
+            const msgSpk = document.getElementById('msgSpkMode');
+            const selPelanggan = document.getElementById('pilih_pelanggan');
+
+            // Reset state
+            keranjang = [];
+            renderKeranjang();
+            document.getElementById('pilih_spk').value = "";
+            selPelanggan.value = "";
+            selPelanggan.disabled = false; 
+
+            if (sumber === 'spk') {
+                // Mode SPK
+                divSpk.style.display = 'block';
+                boxManual.style.display = 'none'; 
+                boxKeranjang.className = 'col-md-12';
+                msgSpk.style.display = 'block'; 
+                selPelanggan.disabled = true;
+            } else {
+                // Mode Manual
+                divSpk.style.display = 'none';
+                boxManual.style.display = 'block';
+                boxKeranjang.className = 'col-md-8';
+                msgSpk.style.display = 'none';
+            }
+            enableInputBarang(); 
+        }
+
+        async function loadSpkList() {
+            try {
+                const res = await fetch('/api/transaksi/spk-siap', { 
+                    headers: { 'Authorization': 'Bearer ' + token } 
+                });
+                const json = await res.json();
+                spkList = json.data || [];
+
+                const select = document.getElementById('pilih_spk');
+                select.innerHTML = '<option value="">-- Pilih SPK --</option>';
+                spkList.forEach(spk => {
+                    select.innerHTML += `<option value="${spk.id}" data-pelanggan="${spk.idPelanggan}">${spk.label}</option>`;
+                });
+            } catch (e) { console.error("Gagal load SPK", e); }
+        }
+
+        async function loadItemFromSpk() {
+            const spkId = document.getElementById('pilih_spk').value;
+            const selectSpk = document.getElementById('pilih_spk');
+            
+            const idPel = selectSpk.options[selectSpk.selectedIndex].getAttribute('data-pelanggan');
+            const selPelanggan = document.getElementById('pilih_pelanggan');
+
+            if (idPel) {
+                selPelanggan.value = idPel;
+                enableInputBarang(); 
+            } else {
+                selPelanggan.value = "";
+                document.getElementById('sectionInputBarang').style.display = 'none';
+                return;
+            }
+
+            if(!spkId) return;
+
+            try {
+                // SweetAlert Loading
+                Swal.fire({
+                    title: 'Memuat Data...',
+                    text: 'Mengambil item dari SPK',
+                    allowOutsideClick: false,
+                    didOpen: () => { Swal.showLoading() }
+                });
+                
+                const res = await fetch(`/api/transaksi/spk-detail/${spkId}`, { headers: { 'Authorization': 'Bearer ' + token } });
+                const json = await res.json();
+                
+                Swal.close(); // Tutup loading
+
+                keranjang = json.data || []; 
+                renderKeranjang(); 
+
+            } catch(e) { 
+                Swal.fire('Error', 'Gagal mengambil detail SPK', 'error');
+                keranjang = []; renderKeranjang(); 
+            }
+        }
+
+        function renderKeranjang() {
+            const tbody = document.getElementById('keranjangBody');
+            const lblTotal = document.getElementById('labelGrandTotal');
+            tbody.innerHTML = '';
+
+            if(keranjang.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-5">Keranjang kosong.</td></tr>';
+                lblTotal.innerText = '0';
+                return;
+            }
+
+            let grandTotal = 0;
+            keranjang.forEach((item, index) => {
+                const subtotal = item.jumlah * item.harga;
+                grandTotal += subtotal;
+
+                let stokInfo = "";
+                if(item.stokGudang !== undefined) {
+                    const color = item.stokGudang < item.jumlah ? 'text-danger' : 'text-muted';
+                    stokInfo = `<br><small class="${color}">Stok Gudang: ${item.stokGudang}</small>`;
+                }
+
+                tbody.innerHTML += `
+                <tr>
+                    <td>
+                        <div class="fw-bold">${item.namaProduk}</div>
+                        ${stokInfo}
+                    </td>
+                    <td><span class="badge bg-light text-dark border">${item.namaSize}</span></td>
+                    <td class="text-center fs-6">${item.jumlah}</td>
+                    <td class="text-end">
+                        <input type="number" class="input-harga-tabel" 
+                            value="${item.harga == 0 ? '' : item.harga}" 
+                            placeholder="0"
+                            onchange="updateHarga(${index}, this.value)" 
+                            onkeyup="updateHarga(${index}, this.value)">
+                    </td>
+                    <td class="text-end fw-bold text-primary" id="subtotal-${index}">
+                        Rp ${formatRupiah(subtotal)}
+                    </td>
+                    <td class="text-center">
+                        <button class="btn btn-danger btn-sm" onclick="hapusItem(${index})"><i class="fas fa-trash"></i></button>
+                    </td>
+                </tr>
+            `;
+            });
+            lblTotal.innerText = formatRupiah(grandTotal);
+        }
+
+        function updateHarga(index, newPrice) {
+            keranjang[index].harga = parseInt(newPrice) || 0;
+            
+            const newSubtotal = keranjang[index].jumlah * keranjang[index].harga;
+            document.getElementById(`subtotal-${index}`).innerText = 'Rp ' + formatRupiah(newSubtotal);
+
+            let total = keranjang.reduce((sum, item) => sum + (item.jumlah * item.harga), 0);
+            document.getElementById('labelGrandTotal').innerText = formatRupiah(total);
+        }
+
         function enableInputBarang() {
             const idPel = document.getElementById('pilih_pelanggan').value;
             const section = document.getElementById('sectionInputBarang');
+            const sumber = document.getElementById('sumber_data').value;
 
-            if(idPel) {
+            const isSpkSelected = sumber === 'spk' && document.getElementById('pilih_spk').value !== "";
+            const isManualReady = sumber === 'manual' && idPel !== "";
+
+            if(isManualReady || isSpkSelected) {
                 section.style.display = 'flex';
                 setTimeout(() => { section.style.opacity = 1; }, 50);
             } else {
@@ -308,85 +499,6 @@
                 }
             } catch(e) { console.error(e); }
         }
-
-        async function loadRiwayatTransaksi() {
-            const tbody = document.getElementById('tableRiwayat');
-            tbody.innerHTML = '<tr><td colspan="6" class="text-center">Memuat data...</td></tr>';
-
-            try {
-                const res = await fetch('/api/barang-keluar', { headers: { 'Authorization': 'Bearer ' + token } });
-                const json = await res.json();
-                riwayatDataGlobal = json.data;
-
-                tbody.innerHTML = '';
-                if(!riwayatDataGlobal || riwayatDataGlobal.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="6" class="text-center">Belum ada riwayat transaksi.</td></tr>';
-                    return;
-                }
-
-                riwayatDataGlobal.forEach(trx => {
-                    const namaPelanggan = trx.pelanggan ? trx.pelanggan.nama : '<span class="text-muted">-</span>';
-                    const totItem = trx.total_item ?? 0;
-                    const totHarga = trx.total_harga ?? 0;
-
-                    tbody.innerHTML += `
-                    <tr>
-                        <td class="ps-3"><span class="badge bg-secondary fw-normal">${trx.id}</span></td>
-                        <td>${trx.tanggal}</td>
-                        <td class="fw-bold text-dark">${namaPelanggan}</td>
-                        <td class="text-center">${totItem}</td>
-                        <td class="fw-bold text-primary">Rp ${formatRupiah(totHarga)}</td>
-                        <td>
-                            <button class="btn-modern-detail" onclick="bukaModalDetail('${trx.id}')">
-                                <i class="fas fa-eye me-1"></i> Detail
-                            </button>
-                        </td>
-                    </tr>
-                `;
-                });
-            } catch(e) { console.error(e); }
-        }
-
-        function bukaModalDetail(idTrx) {
-            const data = riwayatDataGlobal.find(d => d.id === idTrx);
-
-            if(!data) { alert('Data tidak ditemukan!'); return; }
-
-            document.getElementById('modalIdTrx').innerText = data.id;
-            document.getElementById('modalPelanggan').innerText = data.pelanggan ? data.pelanggan.nama : '-';
-            document.getElementById('modalTanggal').innerText = data.tanggal;
-            document.getElementById('modalGrandTotal').innerText = 'Rp ' + formatRupiah(data.total_harga);
-
-            const tbody = document.getElementById('modalTableBody');
-            tbody.innerHTML = '';
-
-            if(data.items && data.items.length > 0) {
-                data.items.forEach(item => {
-                    tbody.innerHTML += `
-                    <tr>
-                        <td>${item.produk}</td>
-                        <td class="text-center"><span class="badge bg-light text-dark border">${item.size}</span></td>
-                        <td class="text-center">${item.jumlah}</td>
-                        <td class="text-end text-muted">Rp ${formatRupiah(item.harga_satuan)}</td>
-                        <td class="text-end fw-bold">Rp ${formatRupiah(item.subtotal)}</td>
-                    </tr>
-                `;
-                });
-            } else {
-                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Tidak ada detail item.</td></tr>';
-            }
-
-            const overlay = document.getElementById('modalDetailOverlay');
-            overlay.classList.add('show');
-        }
-
-        function tutupModalDetail() {
-            document.getElementById('modalDetailOverlay').classList.remove('show');
-        }
-
-        document.getElementById('modalDetailOverlay').addEventListener('click', function(e) {
-            if (e.target === this) tutupModalDetail();
-        });
 
         async function loadMasterProduk() {
             if(produkList.length > 0) return;
@@ -439,7 +551,6 @@
                         cat.sizes.forEach(s => {
                             const stokItem = foundProd.stoks.find(st => st.idSize == s.id);
                             if(stokItem && stokItem.stok > 0) {
-
                                 const itemInCart = keranjang.find(k => k.idProduk == idProduk && k.idSize == s.id);
                                 const qtyInCart = itemInCart ? itemInCart.jumlah : 0;
                                 const sisaRealtime = stokItem.stok - qtyInCart;
@@ -498,7 +609,10 @@
             const selectSizeElem = document.getElementById('pilih_size');
             const selectedOption = selectSizeElem.options[selectSizeElem.selectedIndex];
 
-            if(selectedOption.disabled) { alert("Stok barang ini sudah habis di keranjang!"); return; }
+            if(selectedOption.disabled) { 
+                Swal.fire('Stok Kosong', 'Stok barang ini sudah habis di keranjang!', 'warning');
+                return; 
+            }
 
             const stokTersedia = parseInt(selectedOption.getAttribute('data-stok'));
             const selProd = document.getElementById('pilih_produk');
@@ -506,14 +620,19 @@
             let txtSize = selectedOption.text.split('(')[0].trim();
 
             if(!idProd || !idSize || isNaN(harga) || isNaN(jmlInput) || jmlInput < 1) {
-                alert("Lengkapi data!"); return;
+                Swal.fire('Data Kurang', 'Mohon lengkapi produk, size, harga, dan jumlah.', 'info');
+                return;
             }
 
             const existingIndex = keranjang.findIndex(item => item.idProduk === idProd && item.idSize === idSize);
             let jumlahDiKeranjang = existingIndex !== -1 ? keranjang[existingIndex].jumlah : 0;
 
             if (jmlInput + jumlahDiKeranjang > stokTersedia) {
-                alert(`Stok tidak cukup! \nTotal Stok: ${stokTersedia} \nSudah di keranjang: ${jumlahDiKeranjang}`);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Stok Tidak Cukup!',
+                    text: `Total Stok: ${stokTersedia} | Sudah di keranjang: ${jumlahDiKeranjang}`
+                });
                 return;
             }
 
@@ -524,7 +643,8 @@
                 keranjang.push({
                     idProduk: idProd, namaProduk: txtProd,
                     idSize: idSize, namaSize: txtSize,
-                    harga: harga, jumlah: jmlInput, subtotal: harga * jmlInput
+                    harga: harga, jumlah: jmlInput, 
+                    stokGudang: stokTersedia
                 });
             }
 
@@ -539,54 +659,83 @@
             loadSizes(idProd);
         }
 
-        function renderKeranjang() {
-            const tbody = document.getElementById('keranjangBody');
-            const lblTotal = document.getElementById('labelGrandTotal');
-            tbody.innerHTML = '';
-
-            if(keranjang.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-5">Keranjang kosong.</td></tr>';
-                lblTotal.innerText = '0';
-                return;
-            }
-
-            let grandTotal = 0;
-            keranjang.forEach((item, index) => {
-                grandTotal += item.subtotal;
-                tbody.innerHTML += `
-                <tr>
-                    <td>${item.namaProduk}</td>
-                    <td>${item.namaSize}</td>
-                    <td class="text-end">${formatRupiah(item.harga)}</td>
-                    <td class="text-center">${item.jumlah}</td>
-                    <td class="text-end fw-bold">${formatRupiah(item.subtotal)}</td>
-                    <td class="text-center">
-                        <button class="btn btn-danger btn-sm" onclick="hapusItem(${index})"><i class="fas fa-trash"></i></button>
-                    </td>
-                </tr>
-            `;
-            });
-            lblTotal.innerText = formatRupiah(grandTotal);
-        }
-
+        // --- GANTI CONFIRM DENGAN SWEETALERT ---
         function hapusItem(index) {
-            const idProdYangDihapus = keranjang[index].idProduk;
-            keranjang.splice(index, 1);
-            renderKeranjang();
-            const currentSelectedProd = document.getElementById('pilih_produk').value;
-            if(currentSelectedProd == idProdYangDihapus) { loadSizes(currentSelectedProd); }
+            Swal.fire({
+                title: 'Hapus Item?',
+                text: "Item ini akan dihapus dari daftar keranjang.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Ya, Hapus!',
+                cancelButtonText: 'Batal'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    const idProdYangDihapus = keranjang[index].idProduk;
+                    keranjang.splice(index, 1);
+                    renderKeranjang();
+                    
+                    const currentSelectedProd = document.getElementById('pilih_produk').value;
+                    if(currentSelectedProd && currentSelectedProd == idProdYangDihapus) { loadSizes(currentSelectedProd); }
+                    
+                    Swal.fire('Terhapus!', 'Item berhasil dihapus.', 'success');
+                }
+            });
         }
 
+        // --- GANTI ALERT SIMPAN DENGAN SWEETALERT ---
         async function simpanTransaksi() {
             const idPelanggan = document.getElementById('pilih_pelanggan').value;
-            if(!idPelanggan) { alert("Pelanggan belum dipilih!"); return; }
-            if(keranjang.length === 0) { alert("Keranjang masih kosong!"); return; }
+            const sumber = document.getElementById('sumber_data').value;
+            const spkId = document.getElementById('pilih_spk').value;
+            
+            if(!idPelanggan) { 
+                Swal.fire('Pilih Pelanggan', 'Silakan pilih pelanggan terlebih dahulu.', 'warning'); 
+                return; 
+            }
+            if(keranjang.length === 0) { 
+                Swal.fire('Keranjang Kosong', 'Belum ada barang yang akan ditransaksikan.', 'warning'); 
+                return; 
+            }
 
-            if(!confirm('Simpan transaksi ini?')) return;
+            // Validasi Harga Nol
+            const adaHargaNol = keranjang.some(i => i.harga <= 0);
+            if(adaHargaNol) {
+                const confirmHarga = await Swal.fire({
+                    title: 'Harga Masih Kosong?',
+                    text: "Ada item dengan harga Rp 0. Apakah Anda yakin ingin melanjutkan?",
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: 'Ya, Lanjutkan',
+                    cancelButtonText: 'Periksa Lagi'
+                });
+                if(!confirmHarga.isConfirmed) return;
+            }
+
+            // Konfirmasi Akhir Sebelum Simpan
+            const confirmSimpan = await Swal.fire({
+                title: 'Simpan Transaksi?',
+                text: "Pastikan semua data sudah benar.",
+                icon: 'info',
+                showCancelButton: true,
+                confirmButtonColor: '#10b981',
+                confirmButtonText: 'Ya, Simpan Transaksi!'
+            });
+
+            if(!confirmSimpan.isConfirmed) return;
+
+            // Loading saat proses simpan
+            Swal.fire({
+                title: 'Menyimpan...',
+                allowOutsideClick: false,
+                didOpen: () => { Swal.showLoading() }
+            });
 
             const payload = {
                 tanggal: document.getElementById('tgl_trx').value,
                 idPelanggan: idPelanggan,
+                idPerintahProduksi: (sumber === 'spk') ? spkId : null,
                 items: keranjang.map(item => ({
                     idProduk: item.idProduk, idSize: item.idSize, harga: item.harga, jumlah: item.jumlah
                 }))
@@ -599,22 +748,113 @@
                     body: JSON.stringify(payload)
                 });
                 const json = await res.json();
+                
                 if(res.ok) {
-                    alert('Transaksi Berhasil Disimpan!');
-                    switchView('list');
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Berhasil!',
+                        text: 'Transaksi berhasil disimpan.',
+                        confirmButtonText: 'OK'
+                    }).then(() => {
+                        switchView('list');
+                    });
                 } else {
-                    alert('Gagal: ' + (json.message || JSON.stringify(json)));
+                    Swal.fire('Gagal!', (json.message || 'Terjadi kesalahan saat menyimpan.'), 'error');
                 }
-            } catch(e) { alert('Error Sistem.'); console.error(e); }
+            } catch(e) { 
+                console.error(e);
+                Swal.fire('Error Sistem', 'Tidak dapat terhubung ke server.', 'error'); 
+            }
         }
 
         function resetForm() {
+            document.getElementById('sumber_data').value = "manual";
+            toggleSumberData(); // Reset ke manual
             keranjang = [];
             renderKeranjang();
             document.getElementById('pilih_pelanggan').value = "";
-            enableInputBarang();
+            document.getElementById('tgl_trx').value = new Date().toISOString().split('T')[0];
         }
 
-        loadRiwayatTransaksi();
+        async function loadRiwayatTransaksi() {
+            const tbody = document.getElementById('tableRiwayat');
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center">Memuat data...</td></tr>';
+
+            try {
+                const res = await fetch('/api/barang-keluar', { headers: { 'Authorization': 'Bearer ' + token } });
+                const json = await res.json();
+                riwayatDataGlobal = json.data;
+
+                tbody.innerHTML = '';
+                if(!riwayatDataGlobal || riwayatDataGlobal.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" class="text-center">Belum ada riwayat transaksi.</td></tr>';
+                    return;
+                }
+
+                riwayatDataGlobal.forEach(trx => {
+                    const namaPelanggan = trx.pelanggan ? trx.pelanggan.nama : '<span class="text-muted">-</span>';
+                    const totItem = trx.total_item ?? 0;
+                    const totHarga = trx.total_harga ?? 0;
+
+                    tbody.innerHTML += `
+                    <tr>
+                        <td class="ps-3"><span class="badge bg-secondary fw-normal">${trx.id}</span></td>
+                        <td>${trx.tanggal}</td>
+                        <td class="fw-bold text-dark">${namaPelanggan}</td>
+                        <td class="text-center">${totItem}</td>
+                        <td class="fw-bold text-primary">Rp ${formatRupiah(totHarga)}</td>
+                        <td>
+                            <button class="btn-modern-detail" onclick="bukaModalDetail('${trx.id}')">
+                                <i class="fas fa-eye me-1"></i> Detail
+                            </button>
+                        </td>
+                    </tr>
+                `;
+                });
+            } catch(e) { console.error(e); }
+        }
+
+        function bukaModalDetail(idTrx) {
+            const data = riwayatDataGlobal.find(d => d.id === idTrx);
+            if(!data) { 
+                Swal.fire('Oops...', 'Data transaksi tidak ditemukan!', 'error');
+                return; 
+            }
+
+            document.getElementById('modalIdTrx').innerText = data.id;
+            document.getElementById('modalPelanggan').innerText = data.pelanggan ? data.pelanggan.nama : '-';
+            document.getElementById('modalTanggal').innerText = data.tanggal;
+            document.getElementById('modalGrandTotal').innerText = 'Rp ' + formatRupiah(data.total_harga);
+
+            const tbody = document.getElementById('modalTableBody');
+            tbody.innerHTML = '';
+
+            if(data.items && data.items.length > 0) {
+                data.items.forEach(item => {
+                    tbody.innerHTML += `
+                    <tr>
+                        <td>${item.produk}</td>
+                        <td><span class="badge bg-light text-dark border">${item.size}</span></td>
+                        <td class="text-center">${item.jumlah}</td>
+                        <td class="text-end text-muted">Rp ${formatRupiah(item.harga_satuan)}</td>
+                        <td class="text-end fw-bold">Rp ${formatRupiah(item.subtotal)}</td>
+                    </tr>
+                `;
+                });
+            } else {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Tidak ada detail item.</td></tr>';
+            }
+
+            const overlay = document.getElementById('modalDetailOverlay');
+            overlay.classList.add('show');
+        }
+
+        function tutupModalDetail() {
+            document.getElementById('modalDetailOverlay').classList.remove('show');
+        }
+
+        document.getElementById('modalDetailOverlay').addEventListener('click', function(e) {
+            if (e.target === this) tutupModalDetail();
+        });
     </script>
 @endpush

@@ -55,6 +55,9 @@ Route::middleware('auth:api')->group(function () {
 
     Route::get('/barang-keluar', [BarangKeluarController::class, 'index']);
     Route::post('/barang-keluar', [BarangKeluarController::class, 'store']);
+    Route::get('/transaksi/spk-siap', [BarangKeluarController::class, 'getSpkSiapKirim']);
+    Route::get('/transaksi/spk-detail/{id}', [BarangKeluarController::class, 'getSpkItems']); // Endpoint Baru
+    Route::post('/barang-keluar', [BarangKeluarController::class, 'store']);
 
     Route::get('/karyawan', [KaryawanController::class, 'index']);
     Route::post('/karyawan', [KaryawanController::class, 'store']);

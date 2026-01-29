@@ -5,12 +5,12 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne; // <--- Tambahkan ini
 
 class PerintahProduksi extends Model
 {
     protected $table = 'perintah_produksis';
 
-    // Konfigurasi Primary Key Custom (String: SPK-XXX)
     protected $primaryKey = 'id';
     protected $keyType = 'string';
     public $incrementing = false;
@@ -25,5 +25,10 @@ class PerintahProduksi extends Model
     public function details(): HasMany
     {
         return $this->hasMany(DetailPerintahProduksi::class, 'idPerintahProduksi', 'id');
+    }
+
+    public function transaksi(): HasOne
+    {
+        return $this->hasOne(Transaksi::class, 'idPerintahProduksi', 'id');
     }
 }

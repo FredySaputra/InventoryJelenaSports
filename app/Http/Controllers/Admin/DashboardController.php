@@ -40,7 +40,7 @@ class DashboardController extends Controller
 
         $lowStockCount = Stok::whereColumn('stok', '<', 'min_stok')->count();
 
-        $lowStockItems = Stok::with(['produk', 'size'])
+        $lowStockItems = Stok::with(['produk.bahan', 'size']) 
                             ->whereColumn('stok', '<', 'min_stok')
                             ->orderBy('stok', 'asc') 
                             ->limit(5)

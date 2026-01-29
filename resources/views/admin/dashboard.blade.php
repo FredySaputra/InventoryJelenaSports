@@ -82,7 +82,7 @@
                     @foreach($lowStockItems as $item)
                         <div class="list-group-item d-flex justify-content-between align-items-center">
                             <div>
-                                <span class="fw-bold text-dark">{{ $item->produk->nama ?? '-' }}</span>
+                                <span class="fw-bold text-dark">{{ $item->produk->nama_lengkap ?? '-' }}</span>
                                 <span class="badge bg-light text-dark border ms-2">Size: {{ $item->size->tipe ?? '-' }}</span>
                                 <div class="text-muted small">Min Stok: {{ $item->min_stok }}</div>
                             </div>

@@ -15,6 +15,17 @@ class Produk extends Model
     public $timestamps = false;
     protected $guarded = [];
 
+
+    public function getNamaLengkapAttribute()
+    {
+        $nama = $this->nama;
+        $warna = $this->warna ? ' ' . $this->warna : '';
+        
+        $bahan = $this->bahan ? ' ' . $this->bahan->nama : ''; 
+
+        return trim($nama . $warna . $bahan);
+    }
+
     public function user() : BelongsTo
     {
         return $this->belongsTo(User::class,'idUser','id');

@@ -11,7 +11,7 @@ class DetailTransaksi extends Model
     public $timestamps = false;
     protected $guarded = [];
     public function produk() : BelongsTo
-    {
+    { 
         return $this->belongsTo(Produk::class,'idProduk','id');
     }
 

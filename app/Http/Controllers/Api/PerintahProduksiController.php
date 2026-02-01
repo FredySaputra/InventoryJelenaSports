@@ -118,7 +118,7 @@ class PerintahProduksiController extends Controller
 
     public function show($id)
     {
-        $spk = PerintahProduksi::with(['pelanggan', 'details.produk', 'details.size'])
+        $spk = PerintahProduksi::with(['pelanggan', 'details.produk.bahan', 'details.size'])
             ->where('id', $id)
             ->first();
 

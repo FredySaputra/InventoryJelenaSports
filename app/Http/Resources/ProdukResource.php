@@ -27,6 +27,7 @@ class ProdukResource extends JsonResource
 
             'bahan_id' => $this->idBahan,
             'bahan_nama' => $namaBahan,
+            'bahan' => $this->whenLoaded('bahan'),
             'stoks' => $this->whenLoaded('stoks'),
         ];
     }

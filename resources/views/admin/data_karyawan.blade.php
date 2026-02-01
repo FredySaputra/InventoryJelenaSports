@@ -113,12 +113,12 @@
                 <form id="formKaryawan" onsubmit="simpanData(event)">
                     <input type="hidden" id="karyawanId"> <div class="mb-3">
                         <label class="form-label small fw-bold text-muted">NAMA LENGKAP</label>
-                        <input type="text" id="inputNama" class="form-control input-modern" required placeholder="Contoh: Budi Santoso">
+                        <input type="text" id="inputNama" minlength="1" maxlength="100" class="form-control input-modern" required placeholder="Contoh: Budi Santoso">
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label small fw-bold text-muted">NO. TELEPON</label>
-                        <input type="text" id="inputTelp" class="form-control input-modern" required placeholder="0812...">
+                        <input type="text" id="inputTelp" minlength="1" maxlength="20" class="form-control input-modern" required placeholder="0812...">
                     </div>
 
                     <div class="mb-3">
@@ -129,7 +129,7 @@
                     <div class="mb-3">
                         <label class="form-label small fw-bold text-muted">PASSWORD</label>
                         <input type="password" id="inputPassword" class="form-control input-modern" placeholder="Minimal 6 karakter">
-                        <small id="passwordHelp" class="text-muted d-none" style="font-size: 0.8rem">* Kosongkan jika tidak ingin mengubah password</small>
+                        <small id="passwordHelp" minlength="6" class="text-muted d-none" style="font-size: 0.8rem">* Kosongkan jika tidak ingin mengubah password</small>
                     </div>
 
                     <button type="submit" class="btn btn-primary w-100 py-2 fw-bold" style="border-radius:10px;">SIMPAN DATA</button>
@@ -141,6 +141,8 @@
 @endsection
 
 @push('scripts')
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
     <script>
         const token = localStorage.getItem('api_token');
 
@@ -253,6 +255,12 @@
             const url = isEdit ? `/api/karyawan/${id}` : '/api/karyawan';
             const method = isEdit ? 'PUT' : 'POST';
 
+            // Loading state
+            const btnSubmit = e.target.querySelector('button[type="submit"]');
+            const originalText = btnSubmit.innerText;
+            btnSubmit.innerText = 'Menyimpan...';
+            btnSubmit.disabled = true;
+
             try {
                 const res = await fetch(url, {
                     method: method,
@@ -267,26 +275,60 @@
                 const json = await res.json();
 
                 if (res.ok) {
-                    alert(json.message);
                     tutupModal();
                     loadKaryawan();
+                    
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Berhasil!',
+                        text: json.message || 'Data karyawan berhasil disimpan.',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
                 } else {
                     let msg = 'Gagal menyimpan.';
                     if(json.errors) {
-                        msg += '\n' + JSON.stringify(json.errors);
+                        msg = 'Validasi Gagal:\n' + JSON.stringify(json.errors);
                     } else if (json.message) {
                         msg = json.message;
                     }
-                    alert(msg);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Gagal!',
+                        text: msg
+                    });
                 }
             } catch (error) {
-                alert('Terjadi kesalahan sistem.');
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Terjadi kesalahan sistem.'
+                });
                 console.error(error);
+            } finally {
+                btnSubmit.innerText = originalText;
+                btnSubmit.disabled = false;
             }
         }
 
         async function hapusKaryawan(id) {
-            if(!confirm('Apakah Anda yakin ingin menghapus karyawan ini? Data yang dihapus tidak bisa dikembalikan.')) return;
+            // Tampilkan Modal Konfirmasi
+            const result = await Swal.fire({
+                title: 'Hapus Karyawan?',
+                text: "Data yang dihapus tidak bisa dikembalikan.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Ya, Hapus!',
+                cancelButtonText: 'Batal'
+            });
+
+            // Jika user membatalkan
+            if (!result.isConfirmed) return;
+
+            // Loading
+            Swal.fire({ title: 'Menghapus...', didOpen: () => Swal.showLoading() });
 
             try {
                 const res = await fetch(`/api/karyawan/${id}`, {
@@ -298,13 +340,20 @@
                 });
 
                 if(res.ok) {
-                    alert('Karyawan berhasil dihapus.');
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Terhapus!',
+                        text: 'Karyawan berhasil dihapus.',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
                     loadKaryawan();
                 } else {
-                    alert('Gagal menghapus data.');
+                    Swal.fire('Gagal!', 'Gagal menghapus data.', 'error');
                 }
             } catch (error) {
                 console.error(error);
+                Swal.fire('Error!', 'Terjadi kesalahan koneksi.', 'error');
             }
         }
 

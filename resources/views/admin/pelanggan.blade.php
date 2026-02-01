@@ -43,6 +43,7 @@
 @endsection
 
 @push('scripts')
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <div class="modal fade" id="pelangganModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
@@ -168,7 +169,6 @@
         // 3. BUKA MODAL EDIT
         async function editPelanggan(id) {
             try {
-                // Tampilkan loading di tombol (opsional) atau langsung fetch
                 const res = await fetch(`/api/pelanggans/${id}`, {
                     headers: { 'Authorization': 'Bearer ' + token }
                 });
@@ -193,9 +193,11 @@
                     document.getElementById('alamat').value = data.alamat || '';
 
                     modalInstance.show();
+                } else {
+                    Swal.fire('Error', 'Data pelanggan tidak ditemukan', 'error');
                 }
             } catch (err) {
-                alert('Gagal mengambil data pelanggan.');
+                Swal.fire('Error', 'Gagal mengambil data pelanggan.', 'error');
             }
         }
 
@@ -213,7 +215,7 @@
             const method = isEdit ? 'PUT' : 'POST';
 
             const payload = {
-                id: idValue, // Diabaikan controller saat update (guarded/request), tapi wajib saat create
+                id: idValue,
                 nama: document.getElementById('nama').value,
                 kontak: document.getElementById('kontak').value,
                 alamat: document.getElementById('alamat').value,
@@ -237,21 +239,56 @@
                 if(res.ok) {
                     modalInstance.hide();
                     loadPelanggans();
+                    
+                    // Alert Sukses
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Berhasil!',
+                        text: 'Data pelanggan berhasil disimpan.',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
                 } else {
                     let msg = json.message || 'Gagal menyimpan.';
                     if(json.errors) msg += ' ' + JSON.stringify(json.errors);
-                    alert(msg);
+                    
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Gagal!',
+                        text: msg
+                    });
                 }
             } catch (err) {
-                alert('Terjadi kesalahan koneksi.');
+                Swal.fire('Error!', 'Terjadi kesalahan koneksi.', 'error');
             } finally {
                 btn.disabled = false; btn.innerText = originalText;
             }
         });
 
-        // 5. HAPUS DATA
+        // 5. HAPUS DATA DENGAN SWEETALERT MODAL
         async function deletePelanggan(id) {
-            if(!confirm(`Yakin hapus pelanggan ID: ${id}?`)) return;
+            // Tampilkan Modal Konfirmasi
+            const result = await Swal.fire({
+                title: 'Hapus Pelanggan?',
+                text: `ID Pelanggan: ${id} akan dihapus permanen.`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Ya, Hapus!',
+                cancelButtonText: 'Batal',
+                reverseButtons: true
+            });
+
+            // Jika user klik Batal/Outside
+            if (!result.isConfirmed) return;
+
+            // Loading state
+            Swal.fire({
+                title: 'Menghapus...',
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
 
             try {
                 const res = await fetch(`/api/pelanggans/${id}`, {
@@ -260,12 +297,19 @@
                 });
 
                 if(res.ok) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Terhapus!',
+                        text: 'Pelanggan berhasil dihapus.',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
                     loadPelanggans();
                 } else {
-                    alert('Gagal menghapus data.');
+                    Swal.fire('Gagal!', 'Tidak bisa menghapus data.', 'error');
                 }
             } catch (err) {
-                alert('Terjadi kesalahan koneksi.');
+                Swal.fire('Error!', 'Terjadi kesalahan koneksi.', 'error');
             }
         }
     </script>

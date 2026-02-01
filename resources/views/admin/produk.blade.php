@@ -20,6 +20,7 @@
 @endsection
 
 @push('scripts')
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <div class="modal fade" id="modalProduk" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
@@ -125,14 +126,14 @@
                                     ${displayName}
                                 </td>
                                 <td class="text-end pe-4" style="width: 20%;">
-                                    <button class="btn btn-warning btn-sm me-1"
+                                    <button class="btn btn-light btn-sm border me-1 text-warning"
                                         onclick="openModal('edit', '${group.id}', '${group.nama}',
                                         '${prod.id}', '${prod.nama}', '${prod.warna || ''}', '${prod.bahan_id || ''}')">
-                                        <i class="fas fa-edit"></i> Edit
+                                        <i class="fas fa-pencil-alt"></i>
                                     </button>
 
-                                    <button class="btn btn-danger btn-sm" onclick="deleteProduk('${prod.id}')">
-                                        <i class="fas fa-trash-alt"></i> Hapus
+                                    <button class="btn btn-light btn-sm border text-danger" onclick="deleteProduk('${prod.id}')">
+                                        <i class="fas fa-trash-alt"></i>
                                     </button>
                                 </td>
                             </tr>
@@ -150,7 +151,7 @@
                                 <small class="text-muted" style="font-size:0.75rem;">ID Kategori: ${group.id}</small>
                             </div>
 
-                            <button class="btn btn-primary btn-sm fw-bold px-3" onclick="openModal('add', '${group.id}', '${group.nama}')">
+                            <button class="btn btn-primary btn-sm fw-bold px-3 shadow-sm" onclick="openModal('add', '${group.id}', '${group.nama}')">
                                 <i class="fas fa-plus me-1"></i> Tambah Produk
                             </button>
                         </div>
@@ -253,6 +254,7 @@
             }
         }
 
+        // SIMPAN DATA
         document.getElementById('formProduk').addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = document.getElementById('btnSimpan');
@@ -294,6 +296,13 @@
                 if(res.ok) {
                     modalInstance.hide();
                     loadData();
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Berhasil!',
+                        text: 'Data produk berhasil disimpan.',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
                 } else {
                     let msg = json.message || 'Gagal menyimpan.';
                     if(json.errors) {
@@ -306,15 +315,40 @@
                     alertBox.classList.remove('d-none');
                 }
             } catch(e) {
-                alertBox.innerText = 'Error Koneksi.';
-                alertBox.classList.remove('d-none');
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Oops...',
+                    text: 'Gagal terhubung ke server (Koneksi Error).'
+                });
             } finally {
                 btn.disabled = false; btn.innerText = 'Simpan Produk';
             }
         });
 
+        // HAPUS DATA (DENGAN SWEETALERT MODAL)
         async function deleteProduk(id) {
-            if(!confirm('Hapus produk ini?')) return;
+            // Tampilkan Modal Konfirmasi
+            const result = await Swal.fire({
+                title: 'Hapus Produk?',
+                text: `Produk ID: ${id} akan dihapus permanen.`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Ya, Hapus!',
+                cancelButtonText: 'Batal',
+                reverseButtons: true
+            });
+
+            // Jika user membatalkan
+            if (!result.isConfirmed) return;
+
+            // Tampilkan Loading saat proses hapus
+            Swal.fire({
+                title: 'Menghapus...',
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
 
             try {
                 const res = await fetch('/api/produks/' + id, {
@@ -328,14 +362,21 @@
                 const json = await res.json();
 
                 if(res.ok) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Terhapus!',
+                        text: 'Produk berhasil dihapus.',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
                     loadData();
                 } else {
-                    alert(json.message || 'Terjadi kesalahan saat menghapus data.');
+                    Swal.fire('Gagal!', json.message || 'Terjadi kesalahan saat menghapus data.', 'error');
                 }
 
             } catch(e) {
                 console.error(e);
-                alert('Kesalahan koneksi atau server tidak merespon.');
+                Swal.fire('Error!', 'Kesalahan koneksi atau server tidak merespon.', 'error');
             }
         }
     </script>

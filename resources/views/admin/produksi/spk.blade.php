@@ -121,6 +121,8 @@
 @endsection
 
 @push('scripts')
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
     <script>
         const token = localStorage.getItem('api_token');
 
@@ -128,12 +130,14 @@
         let globalProdukMap = {};
         let globalProdukOptions = '<option value="">Gagal memuat...</option>';
         let globalSizes = [];
-        let currentSpkId = null; // ID SPK yang sedang dibuka detailnya
+        let currentSpkId = null; 
 
         document.addEventListener('DOMContentLoaded', async () => {
             if (!token) {
-                alert("Sesi habis. Silakan login ulang.");
-                window.location.href = '/login'; return;
+                Swal.fire('Sesi Habis', 'Silakan login ulang.', 'warning').then(() => {
+                    window.location.href = '/login';
+                });
+                return;
             }
             await loadMasterData();
             loadSPK();
@@ -166,19 +170,19 @@
                         }
                     });
                 }
-                // Size (Flatten: Ambil dari dalam kategori)
+                // Size
                 if (resSize.ok) {
                     const groups = jsonSize.data || [];
                     globalSizes = [];
                     groups.forEach(g => { if(g.sizes) globalSizes = globalSizes.concat(g.sizes); });
                 }
-                // Init Row di Modal Tambah
+                // Init Row
                 const container = document.getElementById('itemsContainer');
                 if(container) { container.innerHTML = ''; addItemRow(); }
             } catch (e) { console.error(e); }
         }
 
-        // --- 2. LOAD SPK LIST (Tabel Utama) ---
+        // --- 2. LOAD SPK LIST ---
         async function loadSPK() {
             const tbody = document.getElementById('tableBody');
             tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4"><div class="spinner-border text-primary"></div></td></tr>';
@@ -191,14 +195,11 @@
                 if (json.data && json.data.length > 0) {
                     json.data.forEach(item => {
                         const pelanggan = item.pelanggan ? item.pelanggan.nama : '<span class="badge bg-secondary">Stok Gudang</span>';
-
-                        // Hitung Total Pcs
                         let totalPcs = 0;
                         if (item.details) {
                             item.details.forEach(d => { totalPcs += parseInt(d.jumlah_target) || 0; });
                         }
 
-                        // Warna Status
                         let statusBadge = 'bg-secondary';
                         if(item.status === 'Proses') statusBadge = 'bg-primary';
                         if(item.status === 'Selesai') statusBadge = 'bg-success';
@@ -224,7 +225,7 @@
             } catch (e) { tbody.innerHTML = `<tr><td colspan="6" class="text-center text-danger">Error memuat data.</td></tr>`; }
         }
 
-        // --- 3. SHOW DETAIL (Tampil Modal & Tombol Batal) ---
+        // --- 3. SHOW DETAIL ---
         async function showDetail(id) {
             currentSpkId = id;
             const modal = new bootstrap.Modal(document.getElementById('modalDetail'));
@@ -233,17 +234,18 @@
             document.getElementById('det_no_spk').innerText = id;
             document.getElementById('detailBody').innerHTML = '<tr><td colspan="6" class="text-center">Mengambil data...</td></tr>';
 
-            // Reset Tombol Batal
             const btnCancel = document.getElementById('btnCancelSPK');
             btnCancel.style.display = 'block';
 
             try {
                 const res = await fetch(`/api/perintah-produksi/${id}`, { headers: { 'Authorization': 'Bearer ' + token } });
                 const json = await res.json();
-                if(!res.ok) { alert("Gagal mengambil detail"); return; }
+                if(!res.ok) { 
+                    Swal.fire('Error', 'Gagal mengambil detail SPK.', 'error');
+                    return; 
+                }
                 const spk = json.data;
 
-                // Header Info
                 document.getElementById('det_pelanggan').innerText = spk.pelanggan ? spk.pelanggan.nama : 'Stok Gudang';
                 document.getElementById('det_tanggal').innerText = spk.tanggal_target;
 
@@ -253,18 +255,15 @@
                 if(spk.status === 'Dibatalkan') badgeClass = 'bg-danger';
                 document.getElementById('det_status').innerHTML = `<span class="badge ${badgeClass}">${spk.status}</span>`;
 
-                // Sembunyikan tombol batal jika sudah Selesai/Batal
                 if (spk.status === 'Selesai' || spk.status === 'Dibatalkan') {
                     btnCancel.style.display = 'none';
                 }
 
-                // Isi Tabel Progress
                 const tbody = document.getElementById('detailBody');
                 tbody.innerHTML = '';
                 spk.details.forEach(item => {
                     const sisa = item.jumlah_target - item.jumlah_selesai;
                     const percent = Math.round((item.jumlah_selesai / item.jumlah_target) * 100);
-
                     let barColor = 'bg-warning';
                     if(percent >= 50) barColor = 'bg-info';
                     if(percent >= 100) barColor = 'bg-success';
@@ -284,22 +283,34 @@
                                 <div class="progress-bar ${barColor}" style="width: ${percent}%">${percent}%</div>
                             </div>
                         </td>
-                    </tr>
-                `;
+                    </tr>`;
                 });
             } catch (e) { console.error(e); }
         }
 
-        // --- 4. CONFIRM BATALKAN SPK ---
+        // --- 4. CONFIRM BATALKAN SPK (SWEETALERT MODAL) ---
         async function confirmCancelSPK() {
             if(!currentSpkId) return;
 
-            if (!confirm("PERINGATAN: Yakin batalkan SPK ini? \nStatus akan berubah jadi 'Dibatalkan'.")) {
-                return;
-            }
+            const result = await Swal.fire({
+                title: 'Batalkan SPK?',
+                text: "Status SPK akan berubah menjadi 'Dibatalkan'. Proses ini tidak dapat dibatalkan.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Ya, Batalkan!',
+                cancelButtonText: 'Kembali'
+            });
 
-            const btn = document.getElementById('btnCancelSPK');
-            btn.innerText = "Memproses..."; btn.disabled = true;
+            if (!result.isConfirmed) return;
+
+            // Loading
+            Swal.fire({
+                title: 'Memproses...',
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
 
             try {
                 const res = await fetch(`/api/perintah-produksi/${currentSpkId}/batal`, {
@@ -309,17 +320,66 @@
                 const json = await res.json();
 
                 if (res.ok) {
-                    alert("SPK Telah Dibatalkan.");
-                    location.reload();
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Dibatalkan!',
+                        text: 'SPK telah berhasil dibatalkan.',
+                        timer: 1500,
+                        showConfirmButton: false
+                    }).then(() => location.reload());
                 } else {
-                    alert("Gagal: " + json.message);
+                    Swal.fire('Gagal!', json.message || 'Gagal membatalkan SPK.', 'error');
                 }
             } catch (e) {
-                alert("Error koneksi.");
-            } finally {
-                btn.innerText = "Batalkan SPK Ini"; btn.disabled = false;
+                Swal.fire('Error!', 'Terjadi kesalahan koneksi.', 'error');
             }
         }
+
+        // --- 5. SUBMIT FORM SPK ---
+        document.getElementById('formSPK').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = e.target.querySelector('button[type="submit"]');
+            const rows = document.querySelectorAll('.item-row');
+            let items = [];
+            rows.forEach(r => {
+                const p = r.querySelector('.input-produk').value;
+                const s = r.querySelector('.input-size').value;
+                const q = r.querySelector('.input-qty').value;
+                if(p&&s&&q) items.push({ idProduk: p, idSize: s, jumlah_target: q });
+            });
+
+            if(items.length===0) {
+                Swal.fire('Item Kosong', 'Harap tambahkan minimal 1 item produk.', 'warning');
+                return;
+            }
+
+            btn.disabled=true; btn.innerText="Menyimpan...";
+            
+            try {
+                const res = await fetch('/api/perintah-produksi', {
+                    method: 'POST', headers: {'Content-Type':'application/json','Authorization':'Bearer '+token},
+                    body: JSON.stringify({
+                        tanggal_target: document.getElementById('tgl_target').value,
+                        idPelanggan: document.getElementById('selectPelanggan').value||null,
+                        items: items
+                    })
+                });
+                if(res.ok) { 
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Berhasil!',
+                        text: 'Surat Perintah Kerja (SPK) berhasil diterbitkan.',
+                        confirmButtonText: 'OK'
+                    }).then(() => location.reload());
+                } else { 
+                    Swal.fire('Gagal', 'Terjadi kesalahan saat menyimpan data.', 'error'); 
+                }
+            } catch(e) { 
+                Swal.fire('Error', 'Kesalahan koneksi server.', 'error'); 
+            } finally { 
+                btn.disabled=false; btn.innerText="Simpan & Terbitkan SPK"; 
+            }
+        });
 
         // --- FUNGSI HELPER LAIN ---
         function onProdukChange(el) {
@@ -331,7 +391,6 @@
             if (!produkId) return;
 
             const katId = globalProdukMap[produkId];
-            // Filter Size: Tampilkan jika idKategori cocok ATAU idKategori null (size umum)
             const filtered = globalSizes.filter(s => !s.idKategori || s.idKategori === katId);
 
             if (filtered.length > 0) {
@@ -365,33 +424,6 @@
                 if(json.data) json.data.forEach(p => sel.innerHTML += `<option value="${p.id}">${p.nama}</option>`);
             } catch(e){}
         }
-
-        document.getElementById('formSPK').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const btn = e.target.querySelector('button[type="submit"]');
-            const rows = document.querySelectorAll('.item-row');
-            let items = [];
-            rows.forEach(r => {
-                const p = r.querySelector('.input-produk').value, s = r.querySelector('.input-size').value, q = r.querySelector('.input-qty').value;
-                if(p&&s&&q) items.push({ idProduk: p, idSize: s, jumlah_target: q });
-            });
-            if(items.length===0) return alert("Minimal 1 item");
-
-            btn.disabled=true; btn.innerText="Menyimpan...";
-            try {
-                const res = await fetch('/api/perintah-produksi', {
-                    method: 'POST', headers: {'Content-Type':'application/json','Authorization':'Bearer '+token},
-                    body: JSON.stringify({
-                        tanggal_target: document.getElementById('tgl_target').value,
-                        idPelanggan: document.getElementById('selectPelanggan').value||null,
-                        items: items
-                    })
-                });
-                if(res.ok) { alert('Berhasil!'); location.reload(); }
-                else { alert('Gagal simpan.'); }
-            } catch(e) { alert('Error koneksi.'); }
-            finally { btn.disabled=false; btn.innerText="Simpan & Terbitkan SPK"; }
-        });
 
         function openModal() {
             document.getElementById('itemsContainer').innerHTML=''; addItemRow();

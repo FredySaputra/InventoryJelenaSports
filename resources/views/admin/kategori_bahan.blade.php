@@ -79,6 +79,7 @@
 @endsection
 
 @push('scripts')
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <div class="modal fade" id="modalKategori" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
@@ -266,12 +267,24 @@
                 if(res.ok) {
                     modalKatInstance.hide();
                     loadKategoris();
-                    alert('Kategori berhasil ditambahkan');
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Berhasil!',
+                        text: 'Kategori berhasil ditambahkan.',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
                 } else {
                     const json = await res.json();
-                    alert('Gagal: ' + (json.message || 'Cek ID duplikat'));
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Gagal!',
+                        text: json.message || 'Cek ID mungkin duplikat.'
+                    });
                 }
-            } catch(e) { alert('Error sistem'); }
+            } catch(e) {
+                Swal.fire('Error', 'Terjadi kesalahan sistem', 'error');
+            }
             finally { btn.innerText = oriText; btn.disabled = false; }
         });
 
@@ -299,39 +312,101 @@
                 if(res.ok) {
                     modalBahanInstance.hide();
                     loadBahans(currentKategoriId);
-                    alert('Bahan berhasil ditambahkan');
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Berhasil!',
+                        text: 'Bahan berhasil ditambahkan.',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
                 } else {
                     const json = await res.json();
-                    alert('Gagal: ' + (json.message || 'Error'));
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Gagal!',
+                        text: json.message || 'Terjadi kesalahan.'
+                    });
                 }
-            } catch(e) { alert('Error sistem'); }
+            } catch(e) {
+                Swal.fire('Error', 'Terjadi kesalahan sistem', 'error');
+            }
             finally { btn.innerText = oriText; btn.disabled = false; }
         });
 
-        // --- 5. FUNGSI DELETE & MODAL TRIGGER ---
+        // --- 5. FUNGSI DELETE KATEGORI (MODAL CONFIRM) ---
         async function deleteKategori(event, id) {
             event.stopPropagation(); // Mencegah klik row terpanggil
-            if(!confirm('Hapus Kategori? Pastikan kategori ini kosong!')) return;
 
-            const res = await fetch(`/api/kategoris/${id}`, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token } });
+            // Konfirmasi Menggunakan SweetAlert Modal
+            const result = await Swal.fire({
+                title: 'Hapus Kategori?',
+                text: "Pastikan kategori ini kosong! Data yang dihapus tidak bisa dikembalikan.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Ya, Hapus!',
+                cancelButtonText: 'Batal'
+            });
 
-            if(res.ok) {
-                if(currentKategoriId == id) {
-                    // Reset View Kanan jika yg dihapus adalah yg sedang aktif
-                    document.getElementById('emptyStateBahan').classList.remove('d-none');
-                    document.getElementById('contentBahan').classList.add('d-none');
-                    currentKategoriId = null;
+            if (!result.isConfirmed) return;
+
+            // Loading state
+            Swal.fire({
+                title: 'Menghapus...',
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
+
+            try {
+                const res = await fetch(`/api/kategoris/${id}`, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token } });
+
+                if(res.ok) {
+                    if(currentKategoriId == id) {
+                        // Reset View Kanan jika yg dihapus adalah yg sedang aktif
+                        document.getElementById('emptyStateBahan').classList.remove('d-none');
+                        document.getElementById('contentBahan').classList.add('d-none');
+                        currentKategoriId = null;
+                    }
+                    loadKategoris();
+                    Swal.fire('Terhapus!', 'Kategori berhasil dihapus.', 'success');
+                } else {
+                    const json = await res.json();
+                    Swal.fire('Gagal!', json.message || 'Gagal menghapus kategori.', 'error');
                 }
-                loadKategoris();
-            } else {
-                alert('Gagal menghapus kategori (Mungkin masih ada isinya)');
+            } catch(e) {
+                Swal.fire('Error', 'Gagal menghubungi server.', 'error');
             }
         }
 
+        // --- 6. FUNGSI DELETE BAHAN (MODAL CONFIRM) ---
         async function deleteBahan(id) {
-            if(!confirm('Hapus Bahan ini?')) return;
-            await fetch(`/api/bahans/${id}`, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token } });
-            loadBahans(currentKategoriId);
+            // Konfirmasi Menggunakan SweetAlert Modal
+            const result = await Swal.fire({
+                title: 'Hapus Bahan?',
+                text: "Data bahan akan dihapus permanen.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Ya, Hapus!',
+                cancelButtonText: 'Batal'
+            });
+
+            if (!result.isConfirmed) return;
+
+            try {
+                const res = await fetch(`/api/bahans/${id}`, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token } });
+                
+                if (res.ok) {
+                    loadBahans(currentKategoriId);
+                    Swal.fire('Terhapus!', 'Bahan berhasil dihapus.', 'success');
+                } else {
+                    Swal.fire('Gagal!', 'Tidak bisa menghapus bahan.', 'error');
+                }
+            } catch (e) {
+                Swal.fire('Error', 'Kesalahan sistem.', 'error');
+            }
         }
 
         function openModalKategori() {
@@ -341,7 +416,7 @@
 
         function openModalBahan() {
             if (!currentKategoriId) {
-                alert("Pilih kategori terlebih dahulu.");
+                Swal.fire('Pilih Kategori', 'Silakan pilih kategori terlebih dahulu di tabel kiri.', 'info');
                 return;
             }
             document.getElementById('formBahan').reset();

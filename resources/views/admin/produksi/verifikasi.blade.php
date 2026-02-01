@@ -3,7 +3,6 @@
 @section('title', 'Verifikasi Hasil Produksi')
 
 @section('content')
-    {{-- 1. BAGIAN UTAMA: TABEL VERIFIKASI --}}
     <div class="card shadow-sm border-0">
         <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
             <div>
@@ -41,7 +40,7 @@
         </div>
     </div>
 
-    {{-- 2. MODAL VERIFIKASI (TERIMA) --}}
+    {{-- MODAL VERIFIKASI (TERIMA) --}}
     <div class="modal fade" id="modalTerima" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -66,7 +65,7 @@
         </div>
     </div>
 
-    {{-- 3. MODAL LEADERBOARD --}}
+    {{-- MODAL LEADERBOARD --}}
     <div class="modal fade" id="modalLeaderboard" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content border-0 shadow">
@@ -128,13 +127,16 @@
 @endsection
 
 @push('scripts')
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
     <script>
         const token = localStorage.getItem('api_token');
 
         document.addEventListener('DOMContentLoaded', () => {
             if (!token) {
-                alert("Sesi habis. Silakan login ulang.");
-                window.location.href = '/login';
+                Swal.fire('Sesi Habis', 'Silakan login ulang.', 'warning').then(() => {
+                    window.location.href = '/login';
+                });
                 return;
             }
             
@@ -229,7 +231,7 @@
             }
         }
 
-        // --- FUNGSI LOAD VERIFIKASI (SAMA) ---
+        // --- FUNGSI LOAD VERIFIKASI ---
         async function loadVerifikasi() {
             const tbody = document.getElementById('tableData');
             if (!tbody) return;
@@ -290,7 +292,8 @@
             const jumlahDiterima = document.getElementById('input_diterima').value;
 
             if (jumlahDiterima < 0 || jumlahDiterima === '') {
-                alert("Jumlah tidak valid!"); return;
+                Swal.fire('Input Salah', 'Jumlah diterima tidak valid!', 'warning');
+                return;
             }
 
             const btnSimpan = document.querySelector('#modalTerima .btn-success');
@@ -319,22 +322,49 @@
                     const modalEl = document.getElementById('modalTerima');
                     const modal = bootstrap.Modal.getInstance(modalEl);
                     modal.hide();
-                    alert("Berhasil! Stok bertambah.");
+                    
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Berhasil!',
+                        text: 'Stok berhasil ditambahkan.',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
                     loadVerifikasi();
                 } else {
-                    alert("Gagal: " + (json.message || "Error server"));
+                    Swal.fire('Gagal!', (json.message || "Error server"), 'error');
                     loadVerifikasi();
                 }
             } catch (e) {
-                alert("Error: " + e.message);
+                Swal.fire('Error', e.message, 'error');
             } finally {
                 btnSimpan.innerText = textAsli;
                 btnSimpan.disabled = false;
             }
         }
 
+        // --- TOLAK (REJECT) DENGAN SWEETALERT MODAL ---
         async function reject(id) {
-            if(!confirm('Yakin ingin menolak setoran ini? Stok TIDAK akan bertambah.')) return;
+            const result = await Swal.fire({
+                title: 'Tolak Setoran?',
+                text: "Stok TIDAK akan bertambah. Status akan menjadi 'Ditolak'.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Ya, Tolak!',
+                cancelButtonText: 'Batal',
+                reverseButtons: true
+            });
+
+            if (!result.isConfirmed) return;
+
+            // Loading state
+            Swal.fire({
+                title: 'Memproses...',
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
 
             try {
                 const res = await fetch(`/api/progres-produksi/${id}/konfirmasi`, {
@@ -351,14 +381,20 @@
                 
                 const json = await res.json();
                 if (res.ok) {
-                    alert("Laporan berhasil ditolak.");
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Ditolak!',
+                        text: 'Laporan berhasil ditolak.',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
                     loadVerifikasi();
                 } else {
-                    alert("Gagal: " + json.message);
+                    Swal.fire('Gagal!', json.message, 'error');
                     loadVerifikasi();
                 }
             } catch (e) {
-                alert("Error koneksi");
+                Swal.fire('Error!', 'Terjadi kesalahan koneksi.', 'error');
             }
         }
     </script>

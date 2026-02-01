@@ -20,6 +20,7 @@
 @endsection
 
 @push('scripts')
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <div class="modal fade" id="modalSize" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
@@ -41,9 +42,7 @@
 
                         <div class="mb-3">
                             <label class="form-label small fw-bold">ID Size <span class="text-danger">*</span></label>
-
                             <input type="text" id="id_size" class="form-control" placeholder="Contoh: BJU-XL" required>
-
                             <div class="form-text text-muted" style="font-size: 0.75rem;">
                                 Ketik ID lengkap secara manual. Harus unik.
                             </div>
@@ -81,7 +80,7 @@
     <script>
         const token = localStorage.getItem('api_token');
         let isEditMode = false;
-        let currentId = null; // Menyimpan ID Size yang sedang diedit
+        let currentId = null; 
         let modalInstance;
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -186,11 +185,9 @@
             const errorAlert = document.getElementById('errorAlert');
             const infoKat = document.getElementById('infoKategoriNama');
 
-            // Reset Form
             document.getElementById('formSize').reset();
             errorAlert.classList.add('d-none');
 
-            // Set Kategori (Hidden & Visual)
             document.getElementById('hidden_kategori_id').value = kategoriId;
             infoKat.innerText = kategoriNama || 'Tanpa Kategori';
 
@@ -202,7 +199,7 @@
                 title.innerText = 'Edit Size';
 
                 inputId.value = idSize;
-                inputId.disabled = true; // ID tidak bisa diedit
+                inputId.disabled = true;
                 inputId.classList.add('bg-light');
 
                 document.getElementById('tipe_size').value = tipe;
@@ -213,11 +210,9 @@
                 currentId = null;
                 title.innerText = 'Tambah Size Baru';
 
-                inputId.value = ''; // User ketik manual full ID
+                inputId.value = '';
                 inputId.disabled = false;
                 inputId.classList.remove('bg-light');
-
-                // Opsional: Focus ke input ID
                 setTimeout(() => inputId.focus(), 500);
             }
         }
@@ -230,13 +225,12 @@
             const originalText = btn.innerText;
             const errorAlert = document.getElementById('errorAlert');
 
-            // Payload
             let payload = {
-                id: document.getElementById('id_size').value, // ID Full Manual
+                id: document.getElementById('id_size').value,
                 tipe: document.getElementById('tipe_size').value,
                 panjang: document.getElementById('panjang_size').value || null,
                 lebar: document.getElementById('lebar_size').value || null,
-                idKategori: document.getElementById('hidden_kategori_id').value // Kunci Relasi
+                idKategori: document.getElementById('hidden_kategori_id').value
             };
 
             let url = '/api/sizes';
@@ -245,10 +239,8 @@
             if (isEditMode) {
                 url += '/' + currentId;
                 method = 'PUT';
-                delete payload.id; // ID tidak dikirim saat update
+                delete payload.id;
             }
-
-            console.log("Mengirim Payload:", payload);
 
             btn.innerText = 'Menyimpan...';
             btn.disabled = true;
@@ -267,9 +259,9 @@
                 const json = await res.json();
 
                 if (!res.ok) {
+                    // Tampilkan error validasi di dalam modal agar user bisa baca
                     let msg = json.message || 'Gagal menyimpan.';
                     if(json.errors) {
-                        // Tampilkan error validasi
                         msg += '<br>';
                         Object.keys(json.errors).forEach(key => {
                             msg += `- ${json.errors[key][0]}<br>`;
@@ -278,40 +270,82 @@
                     errorAlert.innerHTML = msg;
                     errorAlert.classList.remove('d-none');
                 } else {
+                    // BERHASIL: Tutup Modal & Munculkan SweetAlert Sukses
                     modalInstance.hide();
                     loadData();
+                    
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Berhasil!',
+                        text: 'Data size berhasil disimpan.',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
                 }
             } catch (e) {
-                errorAlert.innerText = 'Gagal terhubung ke server (Koneksi Error).';
-                errorAlert.classList.remove('d-none');
+                // Error Sistem/Jaringan: Pakai SweetAlert Error
+                modalInstance.hide();
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Oops...',
+                    text: 'Gagal terhubung ke server (Koneksi Error).'
+                });
             } finally {
                 btn.innerText = originalText;
                 btn.disabled = false;
             }
         });
 
-        // 4. HAPUS DATA
+        // 4. HAPUS DATA DENGAN SWEETALERT MODAL
         async function deleteData(id) {
-            if (!confirm('Yakin ingin menghapus Size ID: ' + id + '?')) return;
+            // Tampilkan Modal Konfirmasi
+            const result = await Swal.fire({
+                title: 'Hapus Size Ini?',
+                text: `ID Size: ${id} akan dihapus permanen.`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Ya, Hapus!',
+                cancelButtonText: 'Batal',
+                reverseButtons: true
+            });
+
+            // Jika user klik Batal/Outside
+            if (!result.isConfirmed) return;
+
+            // Loading state
+            Swal.fire({
+                title: 'Menghapus...',
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
 
             try {
                 const res = await fetch('/api/sizes/' + id, {
                     method: 'DELETE',
                     headers: {
                         'Authorization': 'Bearer ' + token,
-                        'Accept': 'application/json' // Penting agar return JSON
+                        'Accept': 'application/json'
                     }
                 });
 
                 const json = await res.json();
 
                 if(res.ok) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Terhapus!',
+                        text: 'Data size berhasil dihapus.',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
                     loadData();
                 } else {
-                    alert(json.message || 'Gagal menghapus data');
+                    Swal.fire('Gagal!', json.message || 'Gagal menghapus data.', 'error');
                 }
             } catch (e) {
-                alert('Kesalahan koneksi');
+                Swal.fire('Error!', 'Terjadi kesalahan koneksi.', 'error');
             }
         }
     </script>
